@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sentiment History</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script> <!-- Chart.js -->
+</head>
+<body>
+    <h1>Sentiment History</h1>
+    <canvas id="sentimentChart" width="800" height="400"></canvas>
+
+    <script>
+        const sentimentData = <?= json_encode($data); ?>; // PHP data passed as JSON
+
+        const labels = sentimentData.map(entry => entry.date); // Extract dates
+        const scores = sentimentData.map(entry => entry.average_score); // Extract scores
+
+        const ctx = document.getElementById('sentimentChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'line', // Line chart
+            data: {
+                labels: labels, // X-axis: Dates
+                datasets: [{
+                    label: 'Average Sentiment Score',
+                    data: scores, // Y-axis: Average Sentiment Score
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                scales: {
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Date'
+                        }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Average Sentiment Score'
+                        },
+                        min: -1, // Adjust Y-axis min to match sentiment range
+                        max: 1   // Adjust Y-axis max to match sentiment range
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'top'
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+</html>

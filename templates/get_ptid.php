@@ -1,0 +1,119 @@
+<?php
+use App\Models\PatientMemo; // Include the class with its full namespace
+
+require_once dirname(__DIR__) . '/src/Models/PatientMemo.php'; // Ensure class file is loaded
+$memos = [];
+$patientId = $_GET['patient_id'] ?? null;
+
+if ($patientId) {
+    // Fetch memos for the specific patient using the model function
+    $memos = PatientMemo::getMemosByPatientId($patientId);
+print_r($memos);
+}
+?>
+<?php include 'main.php'; ?>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Patient Memos</title>
+    <style>
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            padding: 10px;
+            text-align: left;
+            border: 1px solid #ddd;
+        }
+        th {
+            background-color: #f4f4f4;
+            font-weight: bold;
+        }
+        tr:hover {
+            background-color: #f9f9f9;
+        }
+    </style>
+</head>
+<body>
+    <h1>Patient Memos</h1>
+
+    <!-- Patient Name/ID Search -->
+    <form method="GET" action="">
+        <label for="patient_id">Enter Patient Name/ID:</label>
+        <input type="text" id="patient_id" name="patient_id" value="<?= htmlspecialchars($patientId) ?>">
+        <button type="submit">Search</button>
+    </form>
+
+    <hr>
+
+    <!-- Display Patient Memos -->
+    <?php if ($patientId && !empty($memos)): ?>
+        <h2>Memos for Patient: <?= htmlspecialchars($patientId) ?></h2>
+        <table>
+            <tbody>
+                <?php foreach ($memos as $memo): ?>
+<table>
+        <thead>
+            <tr>
+                <th>Patient_id</th>
+                <th>Title</th>
+                <th>Created Date</th>
+                <th>Comment</th>
+                <th>Sentiment</th>
+                <th>Score</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+        
+            
+                <tr>
+                    <!-- Memo title with link -->
+                    <td>
+                        <a href="/memos/display?id=<?= $memo['id'] ?>">
+                            <?= htmlspecialchars($memo['patient_id']) ?>
+                        </a>
+                    </td>
+
+
+                    <td>
+                        <?= htmlspecialchars($memo['title'] ?? 'n/a') ?>
+                    </td>
+                        <!-- Created Date -->
+                    <td>
+                        <?= htmlspecialchars($memo['created_at'] ?? 'n/a') ?>
+                    </td>
+                 <!-- content -->
+                    <td>
+                        <?= htmlspecialchars($memo['comment'] ?? 'n/a') ?>
+                    </td>
+                    <!-- Sentiment -->
+                    <td>
+                        <?= htmlspecialchars($memo['sentiment'] ?? 'n/a') ?>
+                    </td>
+                    <!-- Sentiment Score -->
+                    <td>
+                        <?= htmlspecialchars($memo['sentiment_score'] ?? 'n/a') ?>
+                    </td>
+                    <!-- Delete Button -->
+                    <td>
+                        <!-- Edit Button -->
+                        <a href="/memos/edit?id=<?= $memo['id'] ?>" class="edit-button" style="text-decoration:none;">
+                            <button class="edit-button">Edit</button>
+                        </a>
+                        
+                    </td>
+                </tr>
+            <?php endforeach; ?>
+        <?php else: ?>
+            <tr>
+                <td colspan="5" style="text-align: center;">No memos found.</td>
+            </tr>
+        <?php endif; ?>
+        </tbody>
+    </table>                    
+<tr>
+
+</body>
+</html>

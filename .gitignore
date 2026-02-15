@@ -1,0 +1,43 @@
+# Vendor dependencies
+vendor/
+node_modules/
+
+# Composer
+composer.lock
+composer.phar
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Logs
+*.log
+logs/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Cache
+cache/
+.cache/
+tmp/
+
+# Backup
+*.backup
+*.bak
+
+# Docker
+*.env.docker
+
+# Database
+*.sql
+*.sqlite
+*.db

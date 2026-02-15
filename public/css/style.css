@@ -1,0 +1,31 @@
+/* Go Back to Main Button */
+a {
+    display: inline-block;
+    margin-bottom: 20px;
+    padding: 10px 15px;
+    font-size: 16px;
+    background-color: #007BFF;
+    color: white;
+    text-decoration: none;
+    border-radius: 5px;
+}
+
+/* Memo List */
+#memoList li {
+    margin-bottom: 15px;
+    font-size: 18px;
+}
+
+#memoList .delete-button {
+    margin-left: 10px;
+    background-color: red;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    padding: 5px 10px;
+    cursor: pointer;
+}
+
+#memoList .delete-button:hover {
+    background-color: darkred;
+}

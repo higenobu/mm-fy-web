@@ -1,0 +1,138 @@
+<?php
+
+// Configure secure session settings before starting session
+ini_set('session.cookie_httponly', 1);
+ini_set('session.use_only_cookies', 1);
+ini_set('session.cookie_samesite', 'Strict');
+// Note: session.cookie_secure should be set to 1 in production when using HTTPS
+// ini_set('session.cookie_secure', 1);
+
+// Start session
+session_start();
+
+require_once __DIR__ . '/../vendor/autoload.php';
+
+use App\Controllers\AuthController;
+use App\Middleware\AuthMiddleware;
+use App\Models\PatientMemo;
+
+// Get request URI and method
+$requestUri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
+$requestMethod = $_SERVER['REQUEST_METHOD'];
+
+// Define public routes (no authentication required)
+$publicRoutes = ['/login', '/register'];
+
+// Authentication routes
+if ($requestUri === '/login' && $requestMethod === 'GET') {
+    $controller = new AuthController();
+    $controller->showLogin();
+    exit;
+}
+
+if ($requestUri === '/login' && $requestMethod === 'POST') {
+    $controller = new AuthController();
+    $controller->login();
+    exit;
+}
+
+if ($requestUri === '/logout') {
+    $controller = new AuthController();
+    $controller->logout();
+    exit;
+}
+
+if ($requestUri === '/register' && $requestMethod === 'GET') {
+    $controller = new AuthController();
+    $controller->showRegister();
+    exit;
+}
+
+if ($requestUri === '/register' && $requestMethod === 'POST') {
+    $controller = new AuthController();
+    $controller->register();
+    exit;
+}
+
+// Apply authentication middleware for all other routes
+AuthMiddleware::check();
+
+// Home/Main page
+if ($requestUri === '/' || $requestUri === '') {
+    require __DIR__ . '/../templates/main.php';
+    exit;
+}
+
+// Memo routes
+if ($requestUri === '/memos/list') {
+    require __DIR__ . '/../templates/list.php';
+    exit;
+}
+
+if ($requestUri === '/memos/create' && $requestMethod === 'GET') {
+    require __DIR__ . '/../templates/create.php';
+    exit;
+}
+
+if ($requestUri === '/memos/create' && $requestMethod === 'POST') {
+    // Handle memo creation
+    $patient_id = $_POST['patient_id'] ?? '';
+    $title = $_POST['title'] ?? '';
+    $comment = $_POST['comment'] ?? '';
+    
+    if ($patient_id && $title && $comment) {
+        PatientMemo::create($patient_id, $title, $comment);
+        header('Location: /memos/list');
+        exit;
+    } else {
+        $_SESSION['error'] = 'All fields are required.';
+        header('Location: /memos/create');
+        exit;
+    }
+}
+
+if ($requestUri === '/memos/display') {
+    require __DIR__ . '/../templates/display.php';
+    exit;
+}
+
+if ($requestUri === '/memos/edit' && $requestMethod === 'GET') {
+    require __DIR__ . '/../templates/edit.php';
+    exit;
+}
+
+if ($requestUri === '/memos/edit' && $requestMethod === 'POST') {
+    // Handle memo update
+    $id = $_POST['id'] ?? null;
+    $title = $_POST['title'] ?? '';
+    $comment = $_POST['comment'] ?? '';
+    
+    if ($id && $title && $comment) {
+        PatientMemo::update((int)$id, $title, $comment);
+        header('Location: /memos/list');
+        exit;
+    } else {
+        $_SESSION['error'] = 'All fields are required.';
+        header('Location: /memos/edit?id=' . ($id ?? ''));
+        exit;
+    }
+}
+
+if ($requestUri === '/memos/get_ptid') {
+    require __DIR__ . '/../templates/get_ptid.php';
+    exit;
+}
+
+if (strpos($requestUri, '/memos/delete/') === 0) {
+    // Handle delete
+    $id = (int)str_replace('/memos/delete/', '', $requestUri);
+    if ($id > 0) {
+        PatientMemo::delete($id);
+        header('Location: /memos/list');
+        exit;
+    }
+}
+
+// 404 Not Found
+http_response_code(404);
+echo "404 Not Found";

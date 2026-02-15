@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Patient Memos</title>
+</head>
+<body>
+    <h1>List of Patient Memos</h1>
+    <ul>
+        <?php foreach ($memos as $memo): ?>
+            <li>
+                <a href="/memos/display?id=<?= $memo['id'] ?>">
+                    <?= htmlspecialchars($memo['title']) ?>
+                </a>
+            </li>
+        <?php endforeach; ?>
+    </ul>
+</body>
+</html>
+

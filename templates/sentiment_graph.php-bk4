@@ -1,0 +1,45 @@
+fetch('/memos/sentiment_history_data')
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP error! Status: ${response.status}`);
+        }
+        return response.json(); // Directly parse JSON
+    })
+    .then(data => {
+        console.log("Parsed data:", data); // Debug parsed data
+
+        // Extract labels and scores
+        const labels = data.map(entry => entry.date);
+        const scores = data.map(entry => entry.average_score); // Will now be proper numbers
+
+        console.log("Labels for graph:", labels); // Debug labels (dates)
+        console.log("Scores for graph:", scores); // Debug scores (numbers)
+
+        // Render the chart using Chart.js
+        const ctx = document.getElementById('sentimentChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels, // Dates from the API
+                datasets: [{
+                    label: 'Average Sentiment Score',
+                    data: scores, // Sentiment scores from the API
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                scales: {
+                    x: { title: { display: true, text: 'Date' } },
+                    y: { title: { display: true, text: 'Sentiment Score' }, min: -1, max: 1 }
+                },
+                plugins: {
+                    legend: { display: true, position: 'top' }
+                }
+            }
+        });
+    })
+    .catch(error => {
+        console.error("Error fetching or rendering graph:", error); // Log fetch/render errors
+    });

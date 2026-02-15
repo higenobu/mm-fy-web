@@ -1,0 +1,39 @@
+cat > ~/mm-fy-web/QUICK_REFERENCE.md << 'EOF'
+# MM-FY-Web Quick Reference
+
+## URLs
+- Application: http://3.131.245.175:8080/
+- Form: http://3.131.245.175:8080/create_form_noauth.php
+- Graph: http://3.131.245.175:8080/historical_graph.html?patient_id=2
+- API: http://3.131.245.175:8080/api/japanese_fy_results.php?patient_id=2
+
+## Quick Commands
+```bash
+# Deploy changes
+cd ~/mm-fy-web && ./deploy_to_apache.sh
+
+# View logs
+sudo tail -f /var/log/apache2/mm-fy-web-error.log
+
+# Test API
+curl "http://localhost:8080/api/japanese_fy_results.php?patient_id=2" | jq
+
+# Restart Apache
+sudo systemctl restart apache2
+
+# Access database
+psql -U ubuntu -h 127.0.0.1 -d patient_memos
+
+# Check data
+psql -U ubuntu -h 127.0.0.1 -d patient_memos -c "SELECT COUNT(*) FROM japanese_fy_results;"
+Database
+Host: 127.0.0.1
+Port: 5432
+Database: patient_memos
+User: ubuntu
+Password: u123
+File Locations
+Source: ~/mm-fy-web/
+Deployed: /var/www/html/mm-fy-web/
+Logs: /var/log/apache2/ EOF
+

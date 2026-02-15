@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Edit Memo</title>
+</head>
+<body>
+    <h1>Edit Memo</h1>
+    <form method="POST">
+        <label for="title">Title:</label>
+        <input id="title" name="title" value="<?= htmlspecialchars($memo['title'] ?? '') ?>">
+        <label for="comment">Comment:</label>
+        <textarea id="comment" name="comment"><?= htmlspecialchars($memo['comment'] ?? '') ?></textarea>
+        <button type="submit">Save</button>
+    </form>
+</body>
+</html>

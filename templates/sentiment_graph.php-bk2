@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sentiment History Graph</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script> <!-- Chart.js -->
+</head>
+<body>
+    <h1>Sentiment History Graph</h1>
+    <canvas id="sentimentChart" width="800" height="400"></canvas>
+
+    <script>
+        // Fetch sentiment history data
+        fetch('/memos/sentiment_history_data')
+            .then(response => response.json())
+            .then(data => {
+                // Extract labels (dates) and scores
+                const labels = data.map(entry => entry.date);
+                const scores = data.map(entry => entry.average_score);
+
+                // Load the graph
+                const ctx = document.getElementById('sentimentChart').getContext('2d');
+                new Chart(ctx, {
+                    type: 'line', // Line graph
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'Average Sentiment Score',
+                            data: scores,
+                            borderColor: 'rgba(75, 192, 192, 1)',
+                            backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                            borderWidth: 2
+                        }]
+                    },
+                    options: {
+                        scales: {
+                            x: { title: { display: true, text: 'Date' } },
+                            y: {
+                                title: { display: true, text: 'Sentiment Score' },
+                                min: -1, max: 1
+                            }
+                        },
+                        plugins: {
+                            legend: { display: true, position: 'top' }
+                        }
+                    }
+                });
+            });
+    </script>
+</body>
+</html>

@@ -1,0 +1,25 @@
+<?php
+
+// Include the Composer autoloader
+require_once __DIR__ . '/../vendor/autoload.php';
+
+use App\Utils\SentimentAPI;
+
+// Simulate a text string for sentiment analysis
+$testComment = "FastAPI makes my development process so much easier!";
+
+try {
+    // Call the SentimentAPI analyze function to get the sentiment result
+    $result = SentimentAPI::analyze($testComment);
+
+    // Verify and print the response
+    echo "<h1>Sentiment Analysis Result</h1>";
+    echo "<p><strong>Comment:</strong> $testComment</p>";
+    echo "<p><strong>Sentiment:</strong> " . ($result['sentiment'] ?? 'neutral') . "</p>";
+    echo "<p><strong>Polarity:</strong> " . ($result['polarity'] ?? '0.0') . "</p>";
+} catch (Throwable $e) {
+    // Catch any errors and print them
+    echo "<h1>Error</h1>";
+    echo "<p>Failed to analyze sentiment: " . htmlspecialchars($e->getMessage()) . "</p>";
+    error_log("Error in SentimentAPI: " . $e->getMessage());
+}

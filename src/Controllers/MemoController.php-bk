@@ -1,0 +1,155 @@
+<?php
+
+namespace App\Controllers;
+
+use App\Models\PatientMemo;
+use App\Utils\SentimentAnalyzer;
+class MemoController
+{
+    
+public function list()
+    {
+        $filters = [
+            'patient_id' => $_GET['patient_id'] ?? null,
+            'title' => $_GET['title'] ?? null,
+	'comment' => $_GET['comment'] ?? null,            
+	'sentiment' => $_GET['sentiment'] ?? null,
+        ];
+
+        // Fetch memos based on filters
+        $memos = PatientMemo::getFilteredMemos($filters);
+
+        require '../templates/list.php'; // Render list page
+    }
+
+    
+//        $memos = PatientMemo::getAll();
+        
+//	require_once dirname(__DIR__, 2) . '/templates/list.php';
+//require '../templates/list.php';
+    
+
+    public function display(): void
+    {
+        $id = $_GET['id'] ?? null;
+	//echo "Requested ID: " . $id;
+        if (!$id) {
+            die("Error: Memo ID required.");
+        }
+
+        $memo = PatientMemo::getById((int)$id);
+        if (!$memo) {
+            die("Error: Memo not found.");
+        }
+
+        require '../templates/display.php';
+    }
+
+    public function edit(): void
+    {
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $id = (int)$_POST['id'];
+            $title = $_POST['title'];
+            $comment = $_POST['comment'];
+            PatientMemo::update($id, $title, $comment);
+
+            header('Location: /memos/list');
+            exit();
+        } else {
+            $id = $_GET['id'] ?? null;
+            $memo = PatientMemo::getById((int)$id);
+            require '../templates/edit.php';
+        }
+    }
+//
+public function create(): void
+    {
+        // Handle POST request (form submission)
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $title = $_POST['title'] ?? null;     // Retrieve title
+            $comment = $_POST['comment'] ?? null; // Retrieve comment
+		$patient_id=$_POST['patient_id'] ?? null;
+            if (!$title || !$comment || !$patient_id) {
+                echo "Error: All fields are required.";
+                return;
+            }
+
+            try {
+                // Insert the memo into the database
+		$sentiment = SentimentAnalyzer::analyze($comment);
+
+            	PatientMemo::create($patient_id,$title, $comment, $sentiment);
+//                
+
+                // Redirect to the memo list after successful creation
+                header('Location: /memos/list');
+                exit;
+            } catch (Throwable $e) {
+                echo "Error: Failed to create memo - " . $e->getMessage();
+            }
+        }
+
+        // Handle GET request (display the form)
+        require '../templates/create.php';
+    }
+public static function update(int $id, string $title, string $comment, string $sentiment): void
+    {
+        $pdo = Database::getConnection();
+
+        $sql = "UPDATE patient_memos SET title = :title, comment = :comment, sentiment = :sentiment WHERE id = :id";
+        $stmt = $pdo->prepare($sql);
+        $stmt->bindParam(':id', $id, \PDO::PARAM_INT);
+        $stmt->bindParam(':title', $title);
+        $stmt->bindParam(':comment', $comment);
+        $stmt->bindParam(':sentiment', $sentiment);
+        $stmt->execute();
+    }
+public function delete(): void
+{
+    // Parse JSON from the POST request body
+    $data = json_decode(file_get_contents('php://input'), true);
+
+    // Debugging: Check incoming data
+    //var_dump("Received delete data:", $data);
+
+    $id = $data['id'] ?? null; // Extract `id` from the POST data
+
+    if (!$id) {
+        http_response_code(400); // Bad Request if `id` is missing
+        echo "Error: No memo ID provided.";
+        return;
+    }
+
+    try {
+        // Call the model to delete the memo
+        PatientMemo::delete((int)$id);
+        http_response_code(200); // Success
+        echo "Memo deleted successfully.";
+    } catch (Exception $e) {
+        http_response_code(500); // Internal Server Error
+        echo "Error: Could not delete memo: " . $e->getMessage();
+    }
+}
+
+public function viewSentimentGraph(): void
+    {
+        // Fetch sentiment history from the database
+        $data = PatientMemo::getSentimentHistory();
+
+        // Pass the data to the graphing template
+        require '../templates/sentiment_graph.php';
+    }
+
+public function sentimentGraphData(): void
+{
+    // Get sentiment history data from the model
+    $history = PatientMemo::getSentimentHistory();
+    
+    // Send as a JSON response
+    header('Content-Type: application/json');
+    echo json_encode($history);
+}
+
+
+}
+

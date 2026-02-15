@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Display Memo</title>
+</head>
+<body>
+<!-- Go Back to Main -->
+    <a href="/" style="
+        display: inline-block;
+        margin-bottom: 20px;
+        padding: 10px 15px;
+        font-size: 16px;
+        background-color: #007BFF;
+        color: white;
+        text-decoration: none;
+        border-radius: 5px;
+    ">Go Back to Main</a>
+
+    <h1>Displaying Memo</h1>
+    <p>Title: <?= htmlspecialchars($memo['title']) ?></p>
+    <p>Comment: <?= htmlspecialchars($memo['comment']) ?></p>
+    <a href="/memos/edit?id=<?= $memo['id'] ?>">Edit</a>
+</body>
+</html>
+

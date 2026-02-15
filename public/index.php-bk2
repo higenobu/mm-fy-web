@@ -1,0 +1,62 @@
+<?php
+
+
+require_once __DIR__ . '/../vendor/autoload.php';
+
+use App\Controllers\MemoController;
+
+//$memoController = new MemoController();
+//$memoController->create();
+
+
+// Parse the current request URI
+$requestUri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
+$requestMethod = $_SERVER['REQUEST_METHOD'];
+
+// Debugging output to check the parsed route
+//var_dump("Parsed Requested URI: $requestUri");
+
+// Routing logic
+if ($requestUri === '/' && $requestMethod === 'GET') {
+    require '../templates/main.php';
+}
+elseif ($requestUri === '/memos/list' && $requestMethod === 'GET') {
+    (new MemoController())->list();
+} elseif ($requestUri === '/memos/display') {
+    (new MemoController())->display();
+} elseif ($requestUri === '/memos/edit') {
+    (new MemoController())->edit();
+} elseif ($requestUri === '/memos/create') {
+    (new MemoController())->create();  // Add the create route
+
+} elseif ($requestUri === '/memos/delete') {
+    (new MemoController())->delete(); // Add this route for deletion
+} elseif ($requestUri === '/memos/sentiment_history') {
+    (new MemoController())->viewSentimentGraph();
+
+} 
+elseif ($requestUri === '/memos/sentiment_history_data') {
+    (new MemoController())->sentimentGraphData();
+}
+elseif ($requestUri === '/memos/sentiment_graph') {
+    require '../templates/sentiment_graph.php';
+}
+elseif ($requestUri === '/memos/get_ptid') {
+    require '../templates/get_ptid.php';
+}
+elseif ($requestUri === '/memos/edit_memo') {
+    require '../templates/edit_memo.php';
+}
+// Update memo after form submission
+elseif ($_SERVER['REQUEST_URI'] === '/memos/update' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (PatientMemo::updateMemo($_POST)) {
+        header('Location: /memos?update=success');
+        exit();
+    } else {
+        echo "Error updating memo.";
+    }
+}
+else {
+    http_response_code(404);
+    echo "404 Not Found - The requested route does not exist: $requestUri";
+}

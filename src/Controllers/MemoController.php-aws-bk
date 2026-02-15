@@ -1,0 +1,41 @@
+<?php
+
+namespace App\Controllers;
+
+use App\Utils\SentimentAPI;
+
+class MemoController
+{
+    public function showForm(): void
+    {
+        // Display the form to the user
+        require __DIR__ . '/../../templates/create_form.php';
+    }
+
+    public function processForm(): void
+    {
+        // Retrieve user input
+        $text = $_POST['text'] ?? null;
+
+        if (!$text) {
+            echo "Error: Text input is required.";
+            return;
+        }
+
+        // Call SentimentAPI to get analysis
+        //$sentimentResult = "test data result";
+	$sentimentResult = [
+    
+        'title' => 'This is great!',
+        'sentiment' => 'positive',
+        //'sentiment_score' => 0.85
+    ];
+        if (!$sentimentResult) {
+            echo "Error: Failed to retrieve sentiment analysis.";
+            return;
+        }
+
+        // Render results
+        require __DIR__ . '/../../templates/results.php';
+    }
+}

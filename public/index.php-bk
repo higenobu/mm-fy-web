@@ -1,0 +1,24 @@
+<?php
+
+require '../vendor/autoload.php';
+
+use App\Controllers\MemoController;
+
+// Use `parse_url()` to extract only the path part of the URL.
+$requestUri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
+$requestMethod = $_SERVER['REQUEST_METHOD'];
+
+// Debugging: Check the parsed route.
+var_dump("Parsed Requested URI: " . $requestUri);
+
+// Route matching
+if ($requestUri === '/memos/list') {
+    (new MemoController())->list();
+} elseif ($requestUri === '/memos/display') {
+    (new MemoController())->display();
+} elseif ($requestUri === '/memos/edit') {
+    (new MemoController())->edit();
+} else {
+    http_response_code(404);
+    echo "404 Not Found - The requested route does not exist: " . $requestUri;
+}

@@ -1,0 +1,44 @@
+<?php
+
+namespace App\Utils;
+
+class SentimentAPI
+{
+// url = "http://172.17.21.54:8000/analyze"
+    //const SENTIMENT_API_URL = 'http://172.17.21.54:8000/analyze';
+    const SENTIMENT_API_URL = 'http://172.17.21.54:9200/analyzefy';
+    public static function analyze(string $text): ?array
+    {
+        $data = json_encode(['texts' => [$text]]);
+        
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, self::SENTIMENT_API_URL);
+        curl_setopt($ch, CURLOPT_POST, true);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, $data);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, [
+            'Content-Type: application/json',
+            'Content-Length: ' . strlen($data),
+        ]);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        if ($httpCode !== 200 || !$response) {
+            error_log("SentimentAPI Error: HTTP $httpCode - $response");
+            return null;
+        }
+
+        // Decode JSON
+        $result = json_decode($response, true);
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            error_log("JSON Decode Error: " . json_last_error_msg());
+            return null;
+        }
+
+        // Return predictions
+//$result['predictions'][0]={'ABC':'AAAAAA'};
+        return $result['predictions'][0] ?? null;
+    }
+}
