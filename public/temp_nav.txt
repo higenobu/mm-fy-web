@@ -1,0 +1,45 @@
+<style>
+.top-nav {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+}
+.nav-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 12px 20px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    text-decoration: none;
+    border-radius: 8px;
+    font-weight: bold;
+    transition: transform 0.2s, box-shadow 0.2s;
+    font-size: 14px;
+    text-align: center;
+}
+.nav-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+.nav-button.secondary {
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+}
+.nav-button.tertiary {
+    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+}
+</style>
+
+<div class="top-nav">
+    <a href="create_form_noauth.php" class="nav-button">
+        📝 入力フォーム<br><small>Input Form</small>
+    </a>
+    <a href="historical_graph.html?patient_id=2" class="nav-button secondary">
+        📈 履歴グラフ<br><small>History Graph</small>
+    </a>
+    <a href="personality_profile.html?patient_id=2" class="nav-button tertiary">
+        🧠 性格特性<br><small>Personality Profile</small>
+    </a>
+</div>

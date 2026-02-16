@@ -3,13 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Historical Sentiment Analysis - 感情分析履歴</title>
+    <title>Historical Sentiment Analysis</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/date-fns@3.0.0/index.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: 'Segoe UI', 'Yu Gothic', 'Meiryo', sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
             padding: 20px;
@@ -17,592 +16,306 @@
         .container {
             max-width: 1600px;
             margin: 0 auto;
-        }
-        h1 {
-            color: white;
-            text-align: center;
-            margin-bottom: 30px;
-            font-size: 2.5em;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
-        }
-        .back-link {
-            display: inline-block;
-            color: white;
-            text-decoration: none;
-            margin-bottom: 20px;
-            padding: 10px 20px;
-            background: rgba(255,255,255,0.2);
-            border-radius: 8px;
-            font-weight: bold;
-        }
-        .back-link:hover {
-            background: rgba(255,255,255,0.3);
-        }
-        .controls {
             background: white;
-            padding: 25px;
-            border-radius: 15px;
-            margin-bottom: 20px;
-            box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
         }
-        .controls h3 {
-            margin-bottom: 15px;
-            color: #333;
-        }
-        .form-row {
+        .top-nav {
             display: flex;
-            gap: 15px;
-            margin-bottom: 15px;
-            flex-wrap: wrap;
-            align-items: center;
-        }
-        .form-group {
-            display: flex;
-            align-items: center;
             gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
         }
-        .form-group label {
-            font-weight: bold;
-            color: #555;
-            min-width: 100px;
-        }
-        .controls input, .controls select {
-            padding: 10px 15px;
-            border: 2px solid #ddd;
-            border-radius: 8px;
-            font-size: 14px;
-        }
-        .controls input:focus, .controls select:focus {
-            outline: none;
-            border-color: #667eea;
-        }
-        .controls button {
+        .nav-button {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 20px;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
-            border: none;
-            padding: 10px 25px;
+            text-decoration: none;
             border-radius: 8px;
+            font-weight: bold;
+            transition: transform 0.2s, box-shadow 0.2s;
+            border: none;
             cursor: pointer;
             font-size: 14px;
-            font-weight: bold;
-            transition: all 0.3s;
         }
-        .controls button:hover {
+        .nav-button:hover {
             transform: translateY(-2px);
             box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
         }
-        .stats {
-            background: white;
-            padding: 20px;
-            border-radius: 15px;
-            margin-bottom: 20px;
-            box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+        .nav-button.secondary {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
         }
-        .stats-grid {
+        .nav-button.tertiary {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .controls {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+        .controls button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+        .controls button:hover {
+            background: #5568d3;
+        }
+        .chart-container {
+            position: relative;
+            height: 500px;
+            margin: 20px 0;
+        }
+        .loading {
+            text-align: center;
+            padding: 40px;
+            font-size: 1.2em;
+            color: #666;
+        }
+        .error {
+            background: #fee;
+            border: 2px solid #fcc;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+            color: #c33;
+        }
+        .stats {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
             gap: 15px;
+            margin: 20px 0;
         }
         .stat-card {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
             padding: 20px;
-            border-radius: 12px;
+            border-radius: 10px;
             text-align: center;
         }
-        .stat-card h4 {
-            font-size: 14px;
+        .stat-card h3 {
+            font-size: 0.9em;
             opacity: 0.9;
-            margin-bottom: 8px;
+            margin-bottom: 10px;
         }
-        .stat-card p {
-            font-size: 28px;
+        .stat-card .value {
+            font-size: 2em;
             font-weight: bold;
-        }
-        .chart-container {
-            background: white;
-            padding: 30px;
-            border-radius: 15px;
-            margin-bottom: 20px;
-            box-shadow: 0 8px 32px rgba(0,0,0,0.2);
-        }
-        .chart-container h2 {
-            color: #333;
-            margin-bottom: 20px;
-            font-size: 1.5em;
-        }
-        .chart-wrapper {
-            position: relative;
-            height: 450px;
-        }
-        .loading {
-            background: white;
-            padding: 60px;
-            border-radius: 15px;
-            text-align: center;
-            font-size: 20px;
-            color: #666;
-            box-shadow: 0 8px 32px rgba(0,0,0,0.2);
-        }
-        .error {
-            background: #f8d7da;
-            color: #721c24;
-            padding: 20px;
-            border-radius: 15px;
-            border: 2px solid #f5c6cb;
-        }
-        .legend {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 20px;
-            justify-content: center;
-            margin-top: 20px;
-            padding: 15px;
-            background: #f8f9fa;
-            border-radius: 8px;
-        }
-        .legend-item {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        .legend-color {
-            width: 20px;
-            height: 20px;
-            border-radius: 4px;
-        }
-        .timeline {
-            background: white;
-            padding: 30px;
-            border-radius: 15px;
-            margin-bottom: 20px;
-            box-shadow: 0 8px 32px rgba(0,0,0,0.2);
-        }
-        .timeline-item {
-            display: flex;
-            gap: 20px;
-            padding: 15px;
-            margin-bottom: 15px;
-            background: #f8f9fa;
-            border-radius: 8px;
-            border-left: 4px solid #667eea;
-        }
-        .timeline-date {
-            min-width: 150px;
-            font-weight: bold;
-            color: #667eea;
-        }
-        .timeline-scores {
-            flex: 1;
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-            gap: 10px;
-            font-size: 14px;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <a href="/index.php" class="back-link">← Back to Dashboard</a>
-        
-        <h1>📈 Historical Sentiment Analysis<br>感情分析履歴グラフ</h1>
+        <div class="top-nav">
+            <a href="create_form_noauth.php" class="nav-button">
+                📝 入力フォーム<br><small>Input Form</small>
+            </a>
+            <a href="historical_graph.html?patient_id=2" class="nav-button secondary">
+                📈 履歴グラフ<br><small>History Graph</small>
+            </a>
+            <a href="personality_profile.html?patient_id=2" class="nav-button tertiary">
+                🧠 性格特性<br><small>Personality Profile</small>
+            </a>
+        </div>
+
+        <h1>📊 Historical Sentiment Analysis</h1>
         
         <div class="controls">
-            <h3>🔍 Filter & Display Options</h3>
-            
-            <div class="form-row">
-                <div class="form-group">
-                    <label for="patientId">Patient ID:</label>
-                    <input type="number" id="patientId" value="2" min="1">
-                </div>
-                
-                <div class="form-group">
-                    <label for="dateRange">Date Range:</label>
-                    <select id="dateRange">
-                        <option value="7">Last 7 days</option>
-                        <option value="30" selected>Last 30 days</option>
-                        <option value="90">Last 90 days</option>
-                        <option value="365">Last year</option>
-                        <option value="all">All time</option>
-                    </select>
-                </div>
-                
-                <div class="form-group">
-                    <label for="chartType">Chart Type:</label>
-                    <select id="chartType">
-                        <option value="line">Line Chart</option>
-                        <option value="bar">Bar Chart</option>
-                        <option value="area">Area Chart</option>
-                    </select>
-                </div>
-                
-                <button onclick="loadHistoricalData()">📥 Load Data</button>
-                <button onclick="exportData()">💾 Export CSV</button>
-            </div>
-            
-            <div class="form-row">
-                <label style="font-weight: bold;">Select Metrics to Display:</label>
-                <label><input type="checkbox" class="metric-checkbox" value="joy" checked> 喜び (Joy)</label>
-                <label><input type="checkbox" class="metric-checkbox" value="fear" checked> 恐怖 (Fear)</label>
-                <label><input type="checkbox" class="metric-checkbox" value="surprise"> 驚き (Surprise)</label>
-                <label><input type="checkbox" class="metric-checkbox" value="trust" checked> 信頼性 (Trust)</label>
-                <label><input type="checkbox" class="metric-checkbox" value="ambiguity"> 曖昧さ (Ambiguity)</label>
-                <label><input type="checkbox" class="metric-checkbox" value="intent"> 意図性 (Intent)</label>
-                <label><input type="checkbox" class="metric-checkbox" value="economic_hope" checked> 経済期待 (Hope)</label>
-            </div>
+            <label>Patient ID: <input type="number" id="patientId" value="2" min="1"></label>
+            <button onclick="loadData()">🔄 Reload Data</button>
+            <button onclick="exportCSV()">💾 Export CSV</button>
         </div>
         
-        <div id="loading" class="loading">⏳ Loading historical data...</div>
+        <div id="loading" class="loading" style="display: none;">Loading...</div>
         <div id="error" class="error" style="display: none;"></div>
         
-        <div id="stats" class="stats" style="display: none;">
-            <h3>📊 Summary Statistics</h3>
-            <div class="stats-grid">
-                <div class="stat-card">
-                    <h4>Total Records</h4>
-                    <p id="totalRecords">0</p>
-                </div>
-                <div class="stat-card" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
-                    <h4>Avg Joy / 平均喜び</h4>
-                    <p id="avgJoy">0</p>
-                </div>
-                <div class="stat-card" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
-                    <h4>Avg Trust / 平均信頼</h4>
-                    <p id="avgTrust">0</p>
-                </div>
-                <div class="stat-card" style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);">
-                    <h4>Trend / 傾向</h4>
-                    <p id="trend">—</p>
-                </div>
-            </div>
-        </div>
+        <div class="stats" id="stats" style="display: none;"></div>
         
-        <div class="chart-container" id="mainChartContainer" style="display: none;">
-            <h2>📈 Sentiment Trends Over Time / 時系列感情推移</h2>
-            <div class="chart-wrapper">
-                <canvas id="mainChart"></canvas>
-            </div>
-        </div>
-        
-        <div class="chart-container" id="comparisonChartContainer" style="display: none;">
-            <h2>📊 Score Comparison / スコア比較</h2>
-            <div class="chart-wrapper">
-                <canvas id="comparisonChart"></canvas>
-            </div>
-        </div>
-        
-        <div class="timeline" id="timeline" style="display: none;">
-            <h2>📅 Timeline View / タイムライン表示</h2>
-            <div id="timelineContent"></div>
+        <div class="chart-container" style="display: none;" id="chartContainer">
+            <canvas id="chart"></canvas>
         </div>
     </div>
 
     <script>
-        let mainChart, comparisonChart;
-        let historicalData = [];
-        
-        const colors = {
-            joy: { border: 'rgb(255, 99, 132)', bg: 'rgba(255, 99, 132, 0.1)' },
-            fear: { border: 'rgb(54, 162, 235)', bg: 'rgba(54, 162, 235, 0.1)' },
-            surprise: { border: 'rgb(255, 206, 86)', bg: 'rgba(255, 206, 86, 0.1)' },
-            trust: { border: 'rgb(75, 192, 192)', bg: 'rgba(75, 192, 192, 0.1)' },
-            ambiguity: { border: 'rgb(153, 102, 255)', bg: 'rgba(153, 102, 255, 0.1)' },
-            intent: { border: 'rgb(255, 159, 64)', bg: 'rgba(255, 159, 64, 0.1)' },
-            economic_hope: { border: 'rgb(199, 199, 199)', bg: 'rgba(199, 199, 199, 0.1)' }
-        };
-        
-        const labels = {
-            joy: '喜び (Joy)',
-            fear: '恐怖 (Fear)',
-            surprise: '驚き (Surprise)',
-            trust: '信頼性 (Trust)',
-            ambiguity: '曖昧さ (Ambiguity)',
-            intent: '意図性 (Intent)',
-            economic_hope: '経済期待 (Hope)'
-        };
-        
-        // Get patient_id from URL
+        let chart = null;
+        let data = [];
+
         const urlParams = new URLSearchParams(window.location.search);
         const defaultPatientId = urlParams.get('patient_id') || 2;
         document.getElementById('patientId').value = defaultPatientId;
-        
-        async function loadHistoricalData() {
+
+        // Update nav buttons with current patient_id
+        function updateNavButtons() {
             const patientId = document.getElementById('patientId').value;
-            const dateRange = document.getElementById('dateRange').value;
+            document.querySelectorAll('.nav-button').forEach(btn => {
+                if (btn.href && btn.href.includes('?')) {
+                    const url = new URL(btn.href);
+                    url.searchParams.set('patient_id', patientId);
+                    btn.href = url.toString();
+                }
+            });
+        }
+
+        async function loadData() {
+            const patientId = document.getElementById('patientId').value;
+            updateNavButtons();
             
-            document.getElementById('loading').style.display = 'block';
-            document.getElementById('error').style.display = 'none';
-            document.getElementById('stats').style.display = 'none';
-            document.getElementById('mainChartContainer').style.display = 'none';
-            document.getElementById('comparisonChartContainer').style.display = 'none';
-            document.getElementById('timeline').style.display = 'none';
-            
+            const loading = document.getElementById('loading');
+            const error = document.getElementById('error');
+            const stats = document.getElementById('stats');
+            const chartContainer = document.getElementById('chartContainer');
+
+            loading.style.display = 'block';
+            error.style.display = 'none';
+            stats.style.display = 'none';
+            chartContainer.style.display = 'none';
+
             try {
-                const response = await fetch(`/api/japanese_sentiment.php?patient_id=${patientId}`);
+                const url = `/api/japanese_fy_results.php?patient_id=${patientId}&t=${Date.now()}`;
+                console.log('Fetching:', url);
+
+                const response = await fetch(url, {
+                    cache: 'no-cache',
+                    headers: { 'Cache-Control': 'no-cache' }
+                });
+
+                console.log('Response status:', response.status);
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const contentType = response.headers.get('content-type');
+                if (!contentType || !contentType.includes('application/json')) {
+                    const text = await response.text();
+                    console.error('Non-JSON response:', text.substring(0, 500));
+                    throw new Error('Server returned non-JSON response: ' + text.substring(0, 100));
+                }
+
                 const result = await response.json();
-                
-                document.getElementById('loading').style.display = 'none';
-                
-                if (result.success && result.data && result.data.length > 0) {
-                    historicalData = filterByDateRange(result.data, dateRange);
-                    
-                    if (historicalData.length === 0) {
-                        showError('No data found in selected date range');
-                        return;
-                    }
-                    
-                    updateStatistics(historicalData);
-                    updateCharts(historicalData);
-                    updateTimeline(historicalData);
-                    
-                    document.getElementById('stats').style.display = 'block';
-                    document.getElementById('mainChartContainer').style.display = 'block';
-                    document.getElementById('comparisonChartContainer').style.display = 'block';
-                    document.getElementById('timeline').style.display = 'block';
-                } else {
-                    showError(`No historical data found for Patient ID ${patientId}`);
+                console.log('Parsed result:', result);
+
+                if (!result.success) {
+                    throw new Error(result.error || 'Unknown error');
                 }
-            } catch (error) {
-                document.getElementById('loading').style.display = 'none';
-                showError('Error loading data: ' + error.message);
+
+                if (!result.data || result.data.length === 0) {
+                    throw new Error('No data found for patient ' + patientId);
+                }
+
+                data = result.data;
+                loading.style.display = 'none';
+                
+                showStats(data);
+                drawChart(data);
+                
+                stats.style.display = 'grid';
+                chartContainer.style.display = 'block';
+
+            } catch (err) {
+                console.error('Error:', err);
+                loading.style.display = 'none';
+                error.style.display = 'block';
+                error.innerHTML = `<strong>Error:</strong> ${err.message}<br><br>
+                    <small>Check browser console (F12) for more details.</small>`;
             }
         }
-        
-        function filterByDateRange(data, range) {
-            if (range === 'all') return data;
+
+        function showStats(data) {
+            const stats = document.getElementById('stats');
+            const avgA = (data.reduce((sum, d) => sum + parseFloat(d.a_score), 0) / data.length).toFixed(3);
+            const avgB = (data.reduce((sum, d) => sum + parseFloat(d.b_score), 0) / data.length).toFixed(3);
             
-            const days = parseInt(range);
-            const cutoffDate = new Date();
-            cutoffDate.setDate(cutoffDate.getDate() - days);
-            
-            return data.filter(item => {
-                const itemDate = new Date(item.created_at);
-                return itemDate >= cutoffDate;
-            });
+            stats.innerHTML = `
+                <div class="stat-card">
+                    <h3>Total Records</h3>
+                    <div class="value">${data.length}</div>
+                </div>
+                <div class="stat-card">
+                    <h3>Avg A Score</h3>
+                    <div class="value">${avgA}</div>
+                </div>
+                <div class="stat-card">
+                    <h3>Avg B Score</h3>
+                    <div class="value">${avgB}</div>
+                </div>
+            `;
         }
-        
-        function updateStatistics(data) {
-            document.getElementById('totalRecords').textContent = data.length;
+
+        function drawChart(data) {
+            const sorted = [...data].sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+            const labels = sorted.map(d => new Date(d.created_at).toLocaleDateString());
             
-            const avgJoy = data.reduce((sum, d) => sum + parseFloat(d.joy_score), 0) / data.length;
-            const avgTrust = data.reduce((sum, d) => sum + parseFloat(d.trust_score), 0) / data.length;
-            
-            document.getElementById('avgJoy').textContent = avgJoy.toFixed(2);
-            document.getElementById('avgTrust').textContent = avgTrust.toFixed(2);
-            
-            // Calculate trend
-            if (data.length >= 2) {
-                const recent = data.slice(0, Math.ceil(data.length / 2));
-                const older = data.slice(Math.ceil(data.length / 2));
-                
-                const recentAvg = recent.reduce((sum, d) => sum + parseFloat(d.joy_score), 0) / recent.length;
-                const olderAvg = older.reduce((sum, d) => sum + parseFloat(d.joy_score), 0) / older.length;
-                
-                const trend = recentAvg > olderAvg ? '📈 ↑' : recentAvg < olderAvg ? '📉 ↓' : '→';
-                document.getElementById('trend').textContent = trend;
-            }
-        }
-        
-        function updateCharts(data) {
-            // Sort data by date (oldest first for chart)
-            const sortedData = [...data].reverse();
-            
-            // Get selected metrics
-            const selectedMetrics = Array.from(document.querySelectorAll('.metric-checkbox:checked'))
-                .map(cb => cb.value);
-            
-            // Prepare labels (dates)
-            const chartLabels = sortedData.map(item => {
-                const date = new Date(item.created_at);
-                return date.toLocaleDateString('ja-JP', { month: 'short', day: 'numeric' });
-            });
-            
-            // Prepare datasets
-            const datasets = [];
-            
-            const metricMap = {
-                joy: 'joy_score',
-                fear: 'fear_score',
-                surprise: 'surprise_score',
-                trust: 'trust_score',
-                ambiguity: 'ambiguity_score',
-                intent: 'intent_score',
-                economic_hope: 'economic_hope_score'
-            };
-            
-            selectedMetrics.forEach(metric => {
-                const scoreField = metricMap[metric];
-                datasets.push({
-                    label: labels[metric],
-                    data: sortedData.map(item => parseFloat(item[scoreField])),
-                    borderColor: colors[metric].border,
-                    backgroundColor: colors[metric].bg,
-                    tension: 0.4,
-                    fill: document.getElementById('chartType').value === 'area'
-                });
-            });
-            
-            // Destroy existing charts
-            if (mainChart) mainChart.destroy();
-            if (comparisonChart) comparisonChart.destroy();
-            
-            // Main time series chart
-            const chartType = document.getElementById('chartType').value === 'area' ? 'line' : document.getElementById('chartType').value;
-            
-            mainChart = new Chart(document.getElementById('mainChart'), {
-                type: chartType,
-                data: {
-                    labels: chartLabels,
-                    datasets: datasets
+            const datasets = [
+                {
+                    label: 'A Score',
+                    data: sorted.map(d => parseFloat(d.a_score)),
+                    borderColor: '#FF6384',
+                    tension: 0.4
                 },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    interaction: {
-                        intersect: false,
-                        mode: 'index'
-                    },
-                    plugins: {
-                        legend: {
-                            position: 'top',
-                        },
-                        tooltip: {
-                            callbacks: {
-                                title: function(context) {
-                                    const index = context[0].dataIndex;
-                                    const date = new Date(sortedData[index].created_at);
-                                    return date.toLocaleString('ja-JP');
-                                }
-                            }
-                        }
-                    },
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            max: 4,
-                            title: {
-                                display: true,
-                                text: 'Score'
-                            }
-                        },
-                        x: {
-                            title: {
-                                display: true,
-                                text: 'Date'
-                            }
-                        }
-                    }
+                {
+                    label: 'B Score',
+                    data: sorted.map(d => parseFloat(d.b_score)),
+                    borderColor: '#36A2EB',
+                    tension: 0.4
+                },
+                {
+                    label: 'C Score',
+                    data: sorted.map(d => parseFloat(d.c_score)),
+                    borderColor: '#FFCE56',
+                    tension: 0.4
                 }
-            });
-            
-            // Comparison chart (average scores)
-            const avgScores = selectedMetrics.map(metric => {
-                const scoreField = metricMap[metric];
-                return data.reduce((sum, d) => sum + parseFloat(d[scoreField]), 0) / data.length;
-            });
-            
-            comparisonChart = new Chart(document.getElementById('comparisonChart'), {
-                type: 'bar',
-                data: {
-                    labels: selectedMetrics.map(m => labels[m]),
-                    datasets: [{
-                        label: 'Average Score',
-                        data: avgScores,
-                        backgroundColor: selectedMetrics.map(m => colors[m].border)
-                    }]
-                },
+            ];
+
+            if (chart) chart.destroy();
+
+            chart = new Chart(document.getElementById('chart'), {
+                type: 'line',
+                data: { labels, datasets },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
                     scales: {
-                        y: {
-                            beginAtZero: true,
-                            max: 4
-                        }
+                        y: { beginAtZero: true, max: 1 }
                     }
                 }
             });
         }
-        
-        function updateTimeline(data) {
-            const timeline = document.getElementById('timelineContent');
-            timeline.innerHTML = '';
-            
-            // Show last 10 entries
-            const recentData = data.slice(0, 10);
-            
-            recentData.forEach(item => {
-                const date = new Date(item.created_at);
-                const dateStr = date.toLocaleString('ja-JP', {
-                    year: 'numeric',
-                    month: 'short',
-                    day: 'numeric',
-                    hour: '2-digit',
-                    minute: '2-digit'
-                });
-                
-                const timelineItem = document.createElement('div');
-                timelineItem.className = 'timeline-item';
-                timelineItem.innerHTML = `
-                    <div class="timeline-date">${dateStr}</div>
-                    <div class="timeline-scores">
-                        <div>喜び: ${parseFloat(item.joy_score).toFixed(2)}</div>
-                        <div>恐怖: ${parseFloat(item.fear_score).toFixed(2)}</div>
-                        <div>驚き: ${parseFloat(item.surprise_score).toFixed(2)}</div>
-                        <div>信頼性: ${parseFloat(item.trust_score).toFixed(2)}</div>
-                        <div>曖昧さ: ${parseFloat(item.ambiguity_score).toFixed(2)}</div>
-                        <div>意図性: ${parseFloat(item.intent_score).toFixed(2)}</div>
-                        <div>経済期待: ${parseFloat(item.economic_hope_score).toFixed(2)}</div>
-                    </div>
-                `;
-                timeline.appendChild(timelineItem);
-            });
-        }
-        
-        function showError(message) {
-            document.getElementById('error').style.display = 'block';
-            document.getElementById('error').innerHTML = '<strong>Error:</strong> ' + message;
-        }
-        
-        function exportData() {
-            if (historicalData.length === 0) {
+
+        function exportCSV() {
+            if (data.length === 0) {
                 alert('No data to export');
                 return;
             }
-            
-            let csv = 'Date,Joy,Fear,Surprise,Trust,Ambiguity,Intent,Economic Hope\n';
-            
-            historicalData.forEach(item => {
-                const date = new Date(item.created_at).toISOString();
-                csv += `${date},${item.joy_score},${item.fear_score},${item.surprise_score},${item.trust_score},${item.ambiguity_score},${item.intent_score},${item.economic_hope_score}\n`;
+            let csv = 'Date,Text,A,B,C,D,H\n';
+            data.forEach(d => {
+                csv += `${d.created_at},"${d.text}",${d.a_score},${d.b_score},${d.c_score},${d.d_score},${d.h_score}\n`;
             });
-            
             const blob = new Blob([csv], { type: 'text/csv' });
-            const url = window.URL.createObjectURL(blob);
+            const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `sentiment_history_patient_${document.getElementById('patientId').value}_${new Date().toISOString().split('T')[0]}.csv`;
+            a.download = `sentiment_${Date.now()}.csv`;
             a.click();
         }
-        
-        // Update charts when settings change
-        document.getElementById('chartType').addEventListener('change', () => {
-            if (historicalData.length > 0) {
-                updateCharts(historicalData);
-            }
-        });
-        
-        document.querySelectorAll('.metric-checkbox').forEach(cb => {
-            cb.addEventListener('change', () => {
-                if (historicalData.length > 0) {
-                    updateCharts(historicalData);
-                }
-            });
-        });
-        
-        // Load data on page load
+
         window.addEventListener('load', () => {
-            loadHistoricalData();
+            updateNavButtons();
+            loadData();
         });
     </script>
 </body>
