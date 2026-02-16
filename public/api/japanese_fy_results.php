@@ -1,96 +1,146 @@
 <?php
+ob_start();
 header('Content-Type: application/json; charset=utf-8');
 header('Access-Control-Allow-Origin: *');
-header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
-header('Access-Control-Allow-Headers: Content-Type');
+header('Cache-Control: no-cache, no-store, must-revalidate');
 
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-    http_response_code(200);
-    exit;
-}
-
-// Load config
-if (file_exists(__DIR__ . '/config.php')) {
-    require_once __DIR__ . '/config.php';
-}
-
-// Load autoload
-$autoloadPath = __DIR__ . '/../../vendor/autoload.php';
-if (!file_exists($autoloadPath)) {
-    http_response_code(500);
-    echo json_encode(['success' => false, 'error' => 'Autoload not found']);
-    exit;
-}
-
-require $autoloadPath;
+require __DIR__ . '/../../vendor/autoload.php';
 
 use App\Database\Database;
+use App\Utils\PersonalityTraits;
+use App\Middleware\AuthMiddleware;
 
 try {
-    // Connect to database
+    // ✅ SECURITY: Require authentication
+    AuthMiddleware::requireAuth();
+    
+    // ✅ SECURITY: Get current user ID
+    $currentUserId = AuthMiddleware::getUserId();
+    
+    if (!$currentUserId) {
+        throw new Exception('User not authenticated');
+    }
+    
     $db = new Database();
     $conn = $db->getConnection();
     
-    $method = $_SERVER['REQUEST_METHOD'];
+    // Get request parameters
+    $requestedPatientId = $_GET['patient_id'] ?? null;
+    $result_id = $_GET['id'] ?? null;
     
-    if ($method === 'GET') {
-        $patient_id = $_GET['patient_id'] ?? null;
-        $limit = min((int)($_GET['limit'] ?? 50), 100);
-        $offset = (int)($_GET['offset'] ?? 0);
-        
-        // Build query
-        $sql = "SELECT
-                    id, patient_id, memo_id, text,
-                    A_score, B_score, C_score, D_score,
-                    H_score, I_score, J_score, K_score, L_score, M_score,
-                    created_at
-                FROM japanese_fy_results";
-        
-        $params = [];
-        
-        if ($patient_id !== null) {
-            $sql .= " WHERE patient_id = :patient_id";
-            $params[':patient_id'] = (int)$patient_id;
-        }
-        
-        $sql .= " ORDER BY created_at DESC LIMIT :limit OFFSET :offset";
+    if ($result_id) {
+        // Get specific result
+        // ✅ SECURITY: Check access to this specific record
+        $sql = "SELECT jfr.* FROM japanese_fy_results jfr
+                INNER JOIN user_patient_mapping upm 
+                ON jfr.patient_id = upm.patient_id
+                WHERE jfr.id = :id AND upm.user_id = :user_id";
         
         $stmt = $conn->prepare($sql);
+        $stmt->bindValue(':id', $result_id, PDO::PARAM_INT);
+        $stmt->bindValue(':user_id', $currentUserId, PDO::PARAM_INT);
+        $stmt->execute();
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
         
-        foreach ($params as $key => $value) {
-            $stmt->bindValue($key, $value, PDO::PARAM_INT);
+        if (!$result) {
+            http_response_code(403);
+            throw new Exception('Record not found or access denied');
         }
         
-        $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
-        $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
-        $stmt->execute();
+        // Add personality profile
+        $profile = PersonalityTraits::getPersonalityProfile($result);
+        $bigFive = PersonalityTraits::getBigFiveSummary($result);
         
-        $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
-        
+        ob_end_clean();
         echo json_encode([
             'success' => true,
+            'data' => $result,
+            'personality_profile' => $profile,
+            'big_five_summary' => $bigFive
+        ], JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+        
+    } elseif ($requestedPatientId) {
+        // ✅ SECURITY: Verify user has access to this patient
+        if (!AuthMiddleware::canAccessPatient($requestedPatientId)) {
+            http_response_code(403);
+            throw new Exception('Access denied to patient record');
+        }
+        
+        // Get all results for patient
+        $sql = "SELECT jfr.* FROM japanese_fy_results jfr
+                INNER JOIN user_patient_mapping upm 
+                ON jfr.patient_id = upm.patient_id
+                WHERE jfr.patient_id = :patient_id 
+                AND upm.user_id = :user_id
+                ORDER BY jfr.created_at DESC 
+                LIMIT 50";
+        
+        $stmt = $conn->prepare($sql);
+        $stmt->bindValue(':patient_id', $requestedPatientId, PDO::PARAM_INT);
+        $stmt->bindValue(':user_id', $currentUserId, PDO::PARAM_INT);
+        $stmt->execute();
+        $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        // Add interpretations to each result
+        foreach ($results as &$result) {
+            $result['personality_profile'] = PersonalityTraits::getPersonalityProfile($result);
+            $result['big_five_summary'] = PersonalityTraits::getBigFiveSummary($result);
+        }
+        
+        ob_end_clean();
+        echo json_encode([
+            'success' => true,
+            'user_id' => $currentUserId,
+            'patient_id' => $requestedPatientId,
             'count' => count($results),
-            'limit' => $limit,
-            'offset' => $offset,
             'data' => $results
-        ], JSON_UNESCAPED_UNICODE);
+        ], JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
         
     } else {
-        http_response_code(405);
-        echo json_encode(['success' => false, 'error' => 'Method not allowed']);
+        // ✅ SECURITY: Return data for ALL patients user can access
+        $allowedPatientIds = AuthMiddleware::getUserPatientIds($currentUserId);
+        
+        if (empty($allowedPatientIds)) {
+            ob_end_clean();
+            echo json_encode([
+                'success' => true,
+                'count' => 0,
+                'data' => []
+            ], JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+            exit;
+        }
+        
+        $placeholders = str_repeat('?,', count($allowedPatientIds) - 1) . '?';
+        
+        $sql = "SELECT * FROM japanese_fy_results 
+                WHERE patient_id IN ($placeholders)
+                ORDER BY created_at DESC 
+                LIMIT 50";
+        
+        $stmt = $conn->prepare($sql);
+        $stmt->execute($allowedPatientIds);
+        $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        foreach ($results as &$result) {
+            $result['personality_profile'] = PersonalityTraits::getPersonalityProfile($result);
+            $result['big_five_summary'] = PersonalityTraits::getBigFiveSummary($result);
+        }
+        
+        ob_end_clean();
+        echo json_encode([
+            'success' => true,
+            'user_id' => $currentUserId,
+            'accessible_patients' => $allowedPatientIds,
+            'count' => count($results),
+            'data' => $results
+        ], JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
     }
     
-} catch (PDOException $e) {
-    http_response_code(500);
-    echo json_encode([
-        'success' => false,
-        'error' => 'Database error: ' . $e->getMessage()
-    ]);
 } catch (Exception $e) {
+    ob_end_clean();
     http_response_code(500);
     echo json_encode([
         'success' => false,
         'error' => $e->getMessage()
-    ]);
+    ], JSON_UNESCAPED_UNICODE);
 }
-?>

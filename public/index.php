@@ -1,566 +1,220 @@
 <?php
 require __DIR__ . '/../vendor/autoload.php';
 
-use App\Database\Database;
-use App\Auth\Auth;
-//use App\Database\Database;
+use App\Utils\SessionManager;
 
-// Require authentication
-Auth::require();
-
-// Get patient_id from query string
-//$patient_id = $_GET['patient_id'] ?? 2;
-
-// Get patient_id from query string
-$patient_id = $_GET['patient_id'] ?? 2;
-
-// Get statistics
-try {
-    $db = new Database();
-    $conn = $db->getConnection();
-    
-    // Count total memos
-    $stmt = $conn->query("SELECT COUNT(*) FROM patient_memos");
-    $totalMemos = $stmt->fetchColumn();
-    
-    // Count total sentiments
-    $stmt = $conn->query("SELECT COUNT(*) FROM japanese_sentiment_results");
-    $totalSentiments = $stmt->fetchColumn();
-    
-    // Count patients
-    $stmt = $conn->query("SELECT COUNT(DISTINCT patient_id) FROM patient_memos");
-    $totalPatients = $stmt->fetchColumn();
-    
-    // Get recent memos for current patient
-    $stmt = $conn->prepare("SELECT COUNT(*) FROM patient_memos WHERE patient_id = :patient_id");
-    $stmt->execute([':patient_id' => $patient_id]);
-    $patientMemos = $stmt->fetchColumn();
-    
-} catch (Exception $e) {
-    $totalMemos = 0;
-    $totalSentiments = 0;
-    $totalPatients = 0;
-    $patientMemos = 0;
-}
+SessionManager::start();
+$isLoggedIn = SessionManager::isLoggedIn();
+$username = SessionManager::getUsername();
 ?>
 <!DOCTYPE html>
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Patient Sentiment Analysis System</title>
+    <title>MM-FY Analysis - Home</title>
     <style>
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
         }
-        
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            padding: 20px;
-        }
-        
-        .container {
-            max-width: 1400px;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 1200px;
             margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
         }
-        
-        header {
-            text-align: center;
-            color: white;
-            margin-bottom: 40px;
-        }
-        
-        header h1 {
-            font-size: 3em;
-            margin-bottom: 10px;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
-        }
-        
-        header p {
-            font-size: 1.2em;
-            opacity: 0.9;
-        }
-        
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 20px;
-            margin-bottom: 30px;
-        }
-        
-        .stat-card {
+        .header {
             background: white;
-            padding: 30px;
-            border-radius: 15px;
-            box-shadow: 0 8px 32px rgba(0,0,0,0.2);
-            text-align: center;
-            transition: transform 0.3s ease;
-        }
-        
-        .stat-card:hover {
-            transform: translateY(-5px);
-        }
-        
-        .stat-card .icon {
-            font-size: 3em;
-            margin-bottom: 15px;
-        }
-        
-        .stat-card .number {
-            font-size: 2.5em;
-            font-weight: bold;
-            color: #667eea;
-            margin-bottom: 10px;
-        }
-        
-        .stat-card .label {
-            color: #666;
-            font-size: 1.1em;
-        }
-        
-        .controls {
-            background: white;
-            padding: 30px;
-            border-radius: 15px;
-            margin-bottom: 30px;
-            box-shadow: 0 8px 32px rgba(0,0,0,0.2);
-        }
-        
-        .controls h2 {
-            margin-bottom: 20px;
-            color: #333;
-        }
-        
-        .form-group {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            margin-bottom: 20px;
-            flex-wrap: wrap;
-        }
-        
-        .form-group label {
-            font-weight: bold;
-            color: #555;
-            min-width: 100px;
-        }
-        
-        .form-group input,
-        .form-group select {
-            padding: 12px 20px;
-            border: 2px solid #ddd;
-            border-radius: 8px;
-            font-size: 16px;
-            transition: border-color 0.3s;
-            flex: 1;
-            min-width: 200px;
-        }
-        
-        .form-group input:focus,
-        .form-group select:focus {
-            outline: none;
-            border-color: #667eea;
-        }
-        
-        .btn {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 12px 30px;
-            border: none;
-            border-radius: 8px;
-            font-size: 16px;
-            font-weight: bold;
-            cursor: pointer;
-            text-decoration: none;
-            display: inline-block;
-            transition: transform 0.2s, box-shadow 0.2s;
-        }
-        
-        .btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
-        }
-        
-        .btn-secondary {
-            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-        }
-        
-        .btn-success {
-            background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
-        }
-        
-        .actions {
-            display: flex;
-            gap: 15px;
-            flex-wrap: wrap;
-        }
-        
-        .memos-section {
-            background: white;
-            padding: 30px;
-            border-radius: 15px;
-            box-shadow: 0 8px 32px rgba(0,0,0,0.2);
-            margin-bottom: 30px;
-        }
-        
-        .memos-section h2 {
-            color: #333;
+            padding: 20px 30px;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
             margin-bottom: 20px;
             display: flex;
             justify-content: space-between;
             align-items: center;
         }
-        
-        .memos-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
-            gap: 20px;
-        }
-        
-        .memo-card {
-            background: #f8f9fa;
-            padding: 20px;
-            border-radius: 10px;
-            border-left: 4px solid #667eea;
-            transition: transform 0.2s, box-shadow 0.2s;
-        }
-        
-        .memo-card:hover {
-            transform: translateX(5px);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-        }
-        
-        .memo-card h3 {
+        .header h1 {
+            margin: 0;
             color: #333;
-            margin-bottom: 10px;
-            font-size: 1.3em;
+            font-size: 24px;
         }
-        
-        .memo-card .comment {
-            color: #666;
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        .btn {
+            padding: 10px 20px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 500;
+            transition: all 0.3s;
+            display: inline-block;
+            border: none;
+            cursor: pointer;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+        .btn-secondary {
+            background: #e0e0e0;
+            color: #333;
+        }
+        .btn-secondary:hover {
+            background: #d0d0d0;
+        }
+        .content {
+            background: white;
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .menu-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+            margin-top: 30px;
+        }
+        .menu-item {
+            padding: 25px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 12px;
+            color: white;
+            text-decoration: none;
+            transition: all 0.3s;
+            display: block;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+        }
+        .menu-item:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+        }
+        .menu-item h3 {
+            margin: 0 0 10px 0;
+            font-size: 20px;
+        }
+        .menu-item p {
+            margin: 0;
+            opacity: 0.9;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+        .welcome {
+            color: #667eea;
+            font-weight: 600;
+            font-size: 16px;
+        }
+        .feature-list {
+            list-style: none;
+            padding: 0;
+            margin-top: 20px;
+        }
+        .feature-list li {
+            padding: 15px 0;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .feature-list li:last-child {
+            border-bottom: none;
+        }
+        .hero-section {
+            text-align: center;
+            padding: 40px 0;
+        }
+        .hero-section h2 {
+            color: #333;
+            font-size: 32px;
             margin-bottom: 15px;
+        }
+        .hero-section p {
+            color: #666;
+            font-size: 18px;
             line-height: 1.6;
         }
-        
-        .sentiment-preview {
-            background: white;
-            padding: 12px;
-            border-radius: 8px;
-            font-size: 14px;
-        }
-        
-        .sentiment-item {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 8px;
-            align-items: center;
-        }
-        
-        .sentiment-bar {
-            flex: 1;
-            height: 8px;
-            background: #e0e0e0;
-            border-radius: 4px;
-            margin: 0 10px;
-            overflow: hidden;
-        }
-        
-        .sentiment-fill {
-            height: 100%;
-            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
-            transition: width 0.5s ease;
-        }
-        
-        .meta {
-            margin-top: 15px;
-            padding-top: 15px;
-            border-top: 1px solid #ddd;
-            font-size: 13px;
-            color: #999;
-            display: flex;
-            justify-content: space-between;
-        }
-        
-        .loading {
-            text-align: center;
-            padding: 50px;
-            color: white;
-            font-size: 1.5em;
-        }
-        
-        .error {
-            background: #f8d7da;
-            color: #721c24;
-            padding: 20px;
-            border-radius: 10px;
-            margin-bottom: 20px;
-            border: 2px solid #f5c6cb;
-        }
-        
-        .empty-state {
-            text-align: center;
-            padding: 60px;
-            color: #999;
-        }
-        
-        .empty-state .icon {
-            font-size: 5em;
-            margin-bottom: 20px;
-            opacity: 0.3;
-        }
-        
-        footer {
+        .cta-box {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 30px;
+            border-radius: 12px;
+            margin-top: 30px;
             text-align: center;
             color: white;
-            margin-top: 40px;
-            padding: 20px;
-            opacity: 0.8;
-        }
-        
-        @media (max-width: 768px) {
-            header h1 {
-                font-size: 2em;
-            }
-            
-            .stats-grid {
-                grid-template-columns: 1fr;
-            }
-            
-            .memos-grid {
-                grid-template-columns: 1fr;
-            }
-            
-            .form-group {
-                flex-direction: column;
-                align-items: stretch;
-            }
-            
-            .form-group label {
-                min-width: auto;
-            }
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <header>
-            <h1>📊 Patient Sentiment Analysis System</h1>
-            <p>感情分析システム - Analyzing Patient Feedback with AI</p>
-<div style="margin-top: 15px;">
-        <span style="background: rgba(255,255,255,0.3); padding: 8px 15px; border-radius: 20px;">
-            👤 <?= htmlspecialchars(Auth::username()) ?>
-        </span>
-        <a href="/logout.php" style="margin-left: 15px; background: rgba(255,255,255,0.3); padding: 8px 15px; border-radius: 20px; color: white; text-decoration: none;">
-            🚪 Logout
-        </a>
-    </div>  
-      </header>
-        
-        <!-- Statistics Cards -->
-        <div class="stats-grid">
-            <div class="stat-card">
-                <div class="icon">📝</div>
-                <div class="number"><?= $totalMemos ?></div>
-                <div class="label">Total Memos</div>
-            </div>
-            
-            <div class="stat-card">
-                <div class="icon">🎭</div>
-                <div class="number"><?= $totalSentiments ?></div>
-                <div class="label">Sentiment Analyses</div>
-            </div>
-            
-            <div class="stat-card">
-                <div class="icon">👥</div>
-                <div class="number"><?= $totalPatients ?></div>
-                <div class="label">Patients</div>
-            </div>
-            
-            <div class="stat-card">
-                <div class="icon">📈</div>
-                <div class="number"><?= $patientMemos ?></div>
-                <div class="label">Current Patient Memos</div>
-            </div>
+    <div class="header">
+        <h1>📊 MM-FY Analysis System</h1>
+        <div class="user-info">
+            <?php if ($isLoggedIn): ?>
+                <span class="welcome">Welcome, <?= htmlspecialchars($username) ?>!</span>
+                <a href="/logout.php" class="btn btn-secondary">Logout</a>
+            <?php else: ?>
+                <a href="/login.php" class="btn btn-primary">Login</a>
+            <?php endif; ?>
         </div>
-        
-        <!-- Patient Selection & Actions -->
-        <div class="controls">
-            <h2>🔍 Patient Selection</h2>
-            
-            <form method="GET" action="index.php" id="patientForm">
-                <div class="form-group">
-                    <label for="patient_id">Patient ID:</label>
-                    <input type="number" id="patient_id" name="patient_id" 
-                           value="<?= htmlspecialchars($patient_id) ?>" 
-                           min="1" required>
-                    <button type="submit" class="btn">Load Patient</button>
-                </div>
-            </form>
-            
-            <h2 style="margin-top: 30px;">⚡ Quick Actions</h2>
-            
-            <div class="actions">
-                <a href="create_form.php?patient_id=<?= $patient_id ?>" class="btn">
-                    ➕ Create New Memo
-                </a>
-                <a href="sentiment_graph.html?patient_id=<?= $patient_id ?>" class="btn btn-success">
-                    📈 View Sentiment Graph
-                </a>
-	<a href="historical_graph.html?patient_id=<?= $patient_id ?>" class="btn btn-success">
-    	📊 Historical Trends
-	</a>
-                <a href="api/memo.php?patient_id=<?= $patient_id ?>" class="btn btn-secondary" target="_blank">
-                    🔗 API Data (JSON)
-                </a>
-                <button onclick="refreshMemos()" class="btn">
-                    🔄 Refresh
-                </button>
-            </div>
-        </div>
-        
-        <!-- Memos Display -->
-        <div class="memos-section">
-            <h2>
-                <span>📋 Patient <?= $patient_id ?> Memos</span>
-                <span id="memoCount" style="font-size: 0.8em; color: #999;">Loading...</span>
-            </h2>
-            
-            <div id="loading" class="loading">⏳ Loading memos...</div>
-            <div id="error" class="error" style="display: none;"></div>
-            <div id="memosGrid" class="memos-grid"></div>
-            <div id="emptyState" class="empty-state" style="display: none;">
-                <div class="icon">📭</div>
-                <h3>No memos found</h3>
-                <p>Create your first memo for this patient</p>
-                <br>
-                <a href="create_form.php?patient_id=<?= $patient_id ?>" class="btn">
-                    ➕ Create First Memo
-                </a>
-            </div>
-        </div>
-        
-        <footer>
-            <p>Patient Sentiment Analysis System v1.0</p>
-            <p>Powered by AI Sentiment Analysis</p>
-        </footer>
     </div>
-
-    <script>
-        const patientId = <?= $patient_id ?>;
-        
-        async function loadMemos() {
-            const loading = document.getElementById('loading');
-            const error = document.getElementById('error');
-            const grid = document.getElementById('memosGrid');
-            const emptyState = document.getElementById('emptyState');
-            const memoCount = document.getElementById('memoCount');
+    
+    <div class="content">
+        <?php if ($isLoggedIn): ?>
+            <h2>🎯 Dashboard</h2>
+            <p style="color: #666; margin-top: 10px;">Welcome back! Access your personality analysis tools below:</p>
             
-            loading.style.display = 'block';
-            error.style.display = 'none';
-            grid.innerHTML = '';
-            emptyState.style.display = 'none';
+            <div class="menu-grid">
+                <a href="/historical_graph.html" class="menu-item">
+                    <h3>📈 Historical Graph</h3>
+                    <p>View your personality scores over time with interactive charts and trend analysis</p>
+                </a>
+                
+                <a href="/sentiment_graph.html" class="menu-item">
+                    <h3>📊 Sentiment Analysis</h3>
+                    <p>Analyze sentiment patterns and emotional trends with multiple chart types</p>
+                </a>
+                
+                <a href="/personality_profile.html" class="menu-item">
+                    <h3>👤 Personality Profile</h3>
+                    <p>View detailed Big Five personality insights and trait interpretations</p>
+                </a>
+                
+                <a href="/api/japanese_fy_results.php" class="menu-item" target="_blank">
+                    <h3>📄 API Results</h3>
+                    <p>View raw data in JSON format for advanced analysis</p>
+                </a>
+            </div>
+        <?php else: ?>
+            <div class="hero-section">
+                <h2>Welcome to MM-FY Analysis</h2>
+                <p>A comprehensive personality analysis system based on the Big Five personality traits<br>
+                and advanced Japanese sentiment analysis.</p>
+            </div>
             
-            try {
-                const response = await fetch(`/api/memo.php?patient_id=${patientId}`);
-                const result = await response.json();
-                
-                loading.style.display = 'none';
-                
-                if (result.success && result.data.length > 0) {
-                    memoCount.textContent = `${result.data.length} memo(s) found`;
-                    displayMemos(result.data);
-                } else {
-                    emptyState.style.display = 'block';
-                    memoCount.textContent = 'No memos';
-                }
-            } catch (err) {
-                loading.style.display = 'none';
-                error.style.display = 'block';
-                error.textContent = 'Error loading memos: ' + err.message;
-            }
-        }
-        
-        function displayMemos(memos) {
-            const grid = document.getElementById('memosGrid');
+            <div class="cta-box">
+                <h3 style="margin: 0 0 15px 0; font-size: 24px;">Get Started Today</h3>
+                <p style="margin: 0 0 20px 0; opacity: 0.9;">Please login to access your personality analysis dashboard</p>
+                <a href="/login.php" class="btn btn-primary" style="font-size: 16px; padding: 12px 30px;">
+                    Login Now →
+                </a>
+            </div>
             
-            memos.forEach(memo => {
-                const sentiment = memo.sentiment_decoded || {};
-                
-                const card = document.createElement('div');
-                card.className = 'memo-card';
-                card.innerHTML = `
-                    <h3>${escapeHtml(memo.title || 'Untitled')}</h3>
-                    <div class="comment">${escapeHtml(memo.comment || 'No comment')}</div>
-                    
-                    ${sentiment['喜びを感じた'] ? `
-                    <div class="sentiment-preview">
-                        <strong>Sentiment Scores:</strong>
-                        ${createSentimentBar('喜び', sentiment['喜びを感じた'])}
-                        ${createSentimentBar('恐怖', sentiment['恐怖を感じた'])}
-                        ${createSentimentBar('驚き', sentiment['驚きを感じた'])}
-                        ${createSentimentBar('信頼性', sentiment['信頼できる情報と感じた'])}
-                        ${createSentimentBar('曖昧さ', sentiment['曖昧な情報と感じた'])}
-                        ${createSentimentBar('意図性', sentiment['何かの意図をもって書かれたと感じた'])}
-                        ${createSentimentBar('経済期待', sentiment['経済に期待がもてると感じた'])}
-                    </div>
-                    ` : '<div style="color: #999; font-style: italic;">No sentiment data</div>'}
-                    
-                    <div class="meta">
-                        <span>ID: ${memo.id}</span>
-                        <span>${formatDate(memo.created_at)}</span>
-                    </div>
-                `;
-                
-                grid.appendChild(card);
-            });
-        }
-        
-        function createSentimentBar(label, value) {
-            if (!value) return '';
-            const percentage = Math.min((parseFloat(value) / 4) * 100, 100);
-            return `
-                <div class="sentiment-item">
-                    <span style="min-width: 80px;">${label}</span>
-                    <div class="sentiment-bar">
-                        <div class="sentiment-fill" style="width: ${percentage}%"></div>
-                    </div>
-                    <strong style="min-width: 45px; text-align: right;">${parseFloat(value).toFixed(2)}</strong>
-                </div>
-            `;
-        }
-        
-        function escapeHtml(text) {
-            const div = document.createElement('div');
-            div.textContent = text;
-            return div.innerHTML;
-        }
-        
-        function formatDate(dateStr) {
-            const date = new Date(dateStr);
-            return date.toLocaleString('ja-JP', {
-                year: 'numeric',
-                month: '2-digit',
-                day: '2-digit',
-                hour: '2-digit',
-                minute: '2-digit'
-            });
-        }
-        
-        function refreshMemos() {
-            loadMemos();
-        }
-        
-        // Load memos on page load
-        window.addEventListener('load', () => {
-            loadMemos();
-        });
-        
-        // Auto-refresh every 30 seconds
-        setInterval(loadMemos, 30000);
-    </script>
+            <h3 style="margin-top: 40px; color: #333;">✨ Features:</h3>
+            <ul class="feature-list">
+                <li><strong>📈 Historical Tracking:</strong> Monitor personality score changes over time</li>
+                <li><strong>📊 Sentiment Analysis:</strong> Visualize emotional patterns with multiple chart types</li>
+                <li><strong>👤 Personality Profiles:</strong> Detailed Big Five personality trait analysis</li>
+                <li><strong>🔒 Secure Access:</strong> Role-based authentication and authorization</li>
+                <li><strong>🎨 Interactive Charts:</strong> Beautiful visualizations powered by Chart.js</li>
+                <li><strong>📱 Responsive Design:</strong> Works seamlessly on desktop and mobile devices</li>
+            </ul>
+        <?php endif; ?>
+    </div>
 </body>
 </html>

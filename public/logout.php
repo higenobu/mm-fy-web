@@ -1,9 +1,11 @@
 <?php
 require __DIR__ . '/../vendor/autoload.php';
 
-use App\Auth\Auth;
+use App\Utils\SessionManager;
 
-Auth::logout();
-header('Location: /login.php');
+// Logout the user
+SessionManager::logout();
+
+// Redirect to home
+header('Location: /');
 exit;
-

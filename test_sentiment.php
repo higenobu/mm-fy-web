@@ -1,5 +1,5 @@
 <?php
-require 'vendor/autoload.php'; 
+require __DIR__ . '/vendor/autoload.php'; 
 //require 'SentimentAPI.php';
 
 use App\Utils\SentimentAPI;
@@ -15,7 +15,7 @@ if ($result) {
     echo "Error analyzing sentiment." . PHP_EOL;
 }
 
-//require 'vendor/autoload.php';
+//require __DIR__ . '/vendor/autoload.php';
 
 //use App\Utils\SentimentAnalyzer;
 

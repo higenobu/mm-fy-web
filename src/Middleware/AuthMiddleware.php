@@ -2,56 +2,109 @@
 
 namespace App\Middleware;
 
+use App\Utils\SessionManager;
+
 class AuthMiddleware
 {
     /**
-     * Check if user is authenticated
-     * Redirect to login page if not authenticated
-     *
-     * @param int $timeout Session timeout in seconds (default: 1800 = 30 minutes)
+     * Check if user is logged in
+     * Redirect to login if not
      */
-    public static function check(int $timeout = 1800): void
+    public static function requireAuth(): void
     {
-        // Check if user is logged in
-        if (!isset($_SESSION['user_id'])) {
-            // Store the requested URL to redirect after login (only local paths)
-            $requestUri = $_SERVER['REQUEST_URI'] ?? '/';
-            // Validate it's a local path to prevent open redirect
-            if (strpos($requestUri, '/') === 0 && strpos($requestUri, '//') !== 0) {
-                $_SESSION['redirect_after_login'] = $requestUri;
-            }
-            header('Location: /login');
+        SessionManager::start();
+        
+        if (!SessionManager::isLoggedIn()) {
+            http_response_code(401);
+            header('Content-Type: application/json');
+            echo json_encode([
+                'success' => false,
+                'error' => 'Authentication required',
+                'redirect' => '/login.php'
+            ]);
             exit;
         }
-        
-        // Check session timeout
-        if (isset($_SESSION['last_activity'])) {
-            $elapsed = time() - $_SESSION['last_activity'];
-            
-            if ($elapsed > $timeout) {
-                // Session expired
-                session_unset();
-                session_destroy();
-                session_start();
-                $_SESSION['error'] = 'Your session has expired. Please login again.';
-                header('Location: /login');
-                exit;
-            }
-        }
-        
-        // Update last activity time
-        $_SESSION['last_activity'] = time();
     }
-
+    
     /**
-     * Check if user is already logged in
-     * Redirect to home if logged in (for login/register pages)
+     * Get current user's ID
      */
-    public static function guest(): void
+    public static function getUserId(): ?int
     {
-        if (isset($_SESSION['user_id'])) {
-            header('Location: /');
-            exit;
+        return SessionManager::getUserId();
+    }
+    
+    /**
+     * Check if user has access to patient record
+     */
+    public static function canAccessPatient(int $patientId): bool
+    {
+        $userId = self::getUserId();
+        
+        if (!$userId) {
+            return false;
+        }
+        
+        // Check if user owns this patient record
+        // Implement your business logic here
+        return self::hasPatientAccess($userId, $patientId);
+    }
+    
+    /**
+     * Check database for user-patient access
+     */
+    private static function hasPatientAccess(int $userId, int $patientId): bool
+    {
+        try {
+            $db = new \App\Database\Database();
+            $conn = $db->getConnection();
+            
+            // Option A: Direct match (user_id = patient_id)
+            // Uncomment if using this approach
+            // return $userId === $patientId;
+            
+            // Option B: Check mapping table
+            $sql = "SELECT COUNT(*) FROM user_patient_mapping 
+                    WHERE user_id = :user_id AND patient_id = :patient_id";
+            
+            $stmt = $conn->prepare($sql);
+            $stmt->execute([
+                ':user_id' => $userId,
+                ':patient_id' => $patientId
+            ]);
+            
+            return $stmt->fetchColumn() > 0;
+            
+        } catch (\Exception $e) {
+            error_log("Access check failed: " . $e->getMessage());
+            return false;
+        }
+    }
+    
+    /**
+     * Get all patient IDs the user can access
+     */
+    public static function getUserPatientIds(int $userId): array
+    {
+        try {
+            $db = new \App\Database\Database();
+            $conn = $db->getConnection();
+            
+            // Option A: User can only access their own ID
+            // return [$userId];
+            
+            // Option B: Get from mapping table
+            $sql = "SELECT patient_id FROM user_patient_mapping 
+                    WHERE user_id = :user_id";
+            
+            $stmt = $conn->prepare($sql);
+            $stmt->execute([':user_id' => $userId]);
+            
+            return $stmt->fetchAll(\PDO::FETCH_COLUMN);
+            
+        } catch (\Exception $e) {
+            error_log("Get patient IDs failed: " . $e->getMessage());
+            return [];
         }
     }
 }

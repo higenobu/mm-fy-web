@@ -170,71 +170,55 @@
             });
         }
 
-        async function loadData() {
-            const patientId = document.getElementById('patientId').value;
-            updateNavButtons();
-            
-            const loading = document.getElementById('loading');
-            const error = document.getElementById('error');
-            const stats = document.getElementById('stats');
-            const chartContainer = document.getElementById('chartContainer');
+// Add at the beginning of your loadData function
 
-            loading.style.display = 'block';
-            error.style.display = 'none';
-            stats.style.display = 'none';
-            chartContainer.style.display = 'none';
-
-            try {
-                const url = `/api/japanese_fy_results.php?patient_id=${patientId}&t=${Date.now()}`;
-                console.log('Fetching:', url);
-
-                const response = await fetch(url, {
-                    cache: 'no-cache',
-                    headers: { 'Cache-Control': 'no-cache' }
-                });
-
-                console.log('Response status:', response.status);
-
-                if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-                }
-
-                const contentType = response.headers.get('content-type');
-                if (!contentType || !contentType.includes('application/json')) {
-                    const text = await response.text();
-                    console.error('Non-JSON response:', text.substring(0, 500));
-                    throw new Error('Server returned non-JSON response: ' + text.substring(0, 100));
-                }
-
-                const result = await response.json();
-                console.log('Parsed result:', result);
-
-                if (!result.success) {
-                    throw new Error(result.error || 'Unknown error');
-                }
-
-                if (!result.data || result.data.length === 0) {
-                    throw new Error('No data found for patient ' + patientId);
-                }
-
-                data = result.data;
-                loading.style.display = 'none';
-                
-                showStats(data);
-                drawChart(data);
-                
-                stats.style.display = 'grid';
-                chartContainer.style.display = 'block';
-
-            } catch (err) {
-                console.error('Error:', err);
-                loading.style.display = 'none';
-                error.style.display = 'block';
-                error.innerHTML = `<strong>Error:</strong> ${err.message}<br><br>
-                    <small>Check browser console (F12) for more details.</small>`;
-            }
+async function loadData() {
+    try {
+        showLoading(true);
+        
+        // ✅ SECURITY: Don't send patient_id, let backend use session
+        // const patientId = getPatientIdFromURL();  // ❌ OLD WAY
+        
+        // ✅ NEW: Backend will automatically use logged-in user's patient_id
+        const response = await fetch('/api/japanese_fy_results.php');
+        
+        if (response.status === 401) {
+            // Not authenticated, redirect to login
+            window.location.href = '/login.php';
+            return;
         }
-
+        
+        if (response.status === 403) {
+            throw new Error('Access denied to patient records');
+        }
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const result = await response.json();
+        
+        if (!result.success) {
+            throw new Error(result.error || 'Failed to load data');
+        }
+        
+        // Display which patient(s) data is shown
+        const patientInfo = document.getElementById('patient-info');
+        if (patientInfo) {
+            patientInfo.textContent = `Showing data for: ${result.accessible_patients.join(', ')}`;
+        }
+        
+        // Rest of your code...
+        processData(result.data);
+        
+    } catch (error) {
+        console.error('Error loading data:', error);
+        showError(error.message);
+    } finally {
+        showLoading(false);
+    }
+}
+ //   
         function showStats(data) {
             const stats = document.getElementById('stats');
             const avgA = (data.reduce((sum, d) => sum + parseFloat(d.a_score), 0) / data.length).toFixed(3);
