@@ -15,7 +15,7 @@ class User
         $pdo = Database::getConnection();
         
         $stmt = $pdo->prepare("
-            SELECT id, username, email, password_hash, full_name, role, is_active 
+            SELECT id, username, email, password, full_name, role, is_active 
             FROM users 
             WHERE username = :username AND is_active = true
         ");
@@ -24,12 +24,12 @@ class User
         
         $user = $stmt->fetch(PDO::FETCH_ASSOC);
         
-        if ($user && password_verify($password, $user['password_hash'])) {
+        if ($user && password_verify($password, $user['password'])) {
             // Update last login
             self::updateLastLogin($user['id']);
             
             // Remove password hash from returned data
-            unset($user['password_hash']);
+            unset($user['password']);
             return $user;
         }
         
@@ -46,14 +46,14 @@ class User
         $passwordHash = password_hash($password, PASSWORD_BCRYPT);
         
         $stmt = $pdo->prepare("
-            INSERT INTO users (username, email, password_hash, full_name, role) 
+            INSERT INTO users (username, email, password, full_name, role) 
             VALUES (:username, :email, :password_hash, :full_name, :role)
             RETURNING id
         ");
         
         $stmt->bindParam(':username', $username);
         $stmt->bindParam(':email', $email);
-        $stmt->bindParam(':password_hash', $passwordHash);
+        $stmt->bindParam(':password', $passwordHash);
         $stmt->bindParam(':full_name', $fullName);
         $stmt->bindParam(':role', $role);
         $stmt->execute();

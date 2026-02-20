@@ -6,7 +6,7 @@ class SentimentAPI
 {
 // url = "http://172.17.21.54:8000/analyze"
     //const SENTIMENT_API_URL = 'http://172.17.21.54:8000/analyze';
-    const SENTIMENT_API_URL = 'http://172.17.21.54:9200/analyzefy';
+    const SENTIMENT_API_URL = 'https://api.kcg.edu/analyzefy';
     public static function analyze(string $text): ?array
     {
         $data = json_encode(['texts' => [$text]]);

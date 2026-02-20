@@ -266,7 +266,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             Username: <code>testuser</code><br>
             Password: <code>password123</code>
         </div>
-        
+ <div class="links" style="margin-top: 20px; text-align: center; font-size: 14px; color: #666;">
+            Don't have an account? <a href="/register.php" style="color: #667eea; text-decoration: none; font-weight: 600;">Register here</a>
+        </div>        
         <div class="footer-links">
             <a href="/">← Back to Home</a>
         </div>

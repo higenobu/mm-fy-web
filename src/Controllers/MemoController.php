@@ -2,8 +2,36 @@
 
 namespace App\Controllers;
 
+
+require __DIR__ . '/../../vendor/autoload.php';
+
 use App\Database\Database;
+use App\Utils\SessionManager;
+use App\Utils\PersonalityTraits;
+use App\Middleware\AuthMiddleware;
 use App\Utils\SentimentAPI;
+
+
+ // Start session and check authentication
+    SessionManager::start();
+
+    if (!SessionManager::isLoggedIn()) {
+        http_response_code(401);
+        echo json_encode([
+            'success' => false,
+            'error' => 'Not authenticated',
+            'authenticated' => false
+        ]);
+        exit;
+    }
+
+    $userId = SessionManager::getUserId();
+     $patientId = $userId;
+     //var_dump($userId);
+    if (!$userId) {
+        throw new Exception('User ID not found in session');
+    }    
+
 
 class MemoController
 {
@@ -28,7 +56,23 @@ class MemoController
             return;
         }
 
-        $patient_id = $_POST['patient_id'] ?? null;
+ // Start session and check authentication
+    SessionManager::start();
+
+    if (!SessionManager::isLoggedIn()) {
+        http_response_code(401);
+        echo json_encode([
+            'success' => false,
+            'error' => 'Not authenticated',
+            'authenticated' => false
+        ]);
+        exit;
+    }
+
+    $userId = SessionManager::getUserId();
+     $patientId = $userId;
+
+        $patient_id = $patientId;
         $title = $_POST['title'] ?? '';
         $comment = $_POST['comment'] ?? '';
         $text = $_POST['text'] ?? $comment;

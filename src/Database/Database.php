@@ -20,9 +20,9 @@ class Database
                 // PostgreSQL connection settings
                 $host = '127.0.0.1'; // Change this if hosting elsewhere
                 $port = '5432'; // Default PostgreSQL port
-                $dbname = 'patient_memos';
-                $user = 'matsuo';
-                $password = 'masanobu';
+                $dbname = 'fydb';
+                $user = 'ubuntu';
+                $password = 'u123';
 
                 $dsn = "pgsql:host=$host;port=$port;dbname=$dbname";
                 self::$connection = new PDO($dsn, $user, $password);

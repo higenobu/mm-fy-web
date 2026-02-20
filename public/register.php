@@ -54,15 +54,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $passwordHash = password_hash($password, PASSWORD_BCRYPT);
                     
                     $stmt = $conn->prepare("
-                        INSERT INTO users (username, email, password_hash, full_name, role, is_active)
-                        VALUES (:username, :email, :password_hash, :full_name, 'user', true)
+                        INSERT INTO users (username, email, password, role, is_active)
+                        VALUES (:username, :email, :password, 'user', true)
                     ");
                     
                     $stmt->execute([
                         ':username' => $username,
                         ':email' => $email,
-                        ':password_hash' => $passwordHash,
-                        ':full_name' => $fullName
+                        ':password' => $passwordHash
+                        
                     ]);
 
                     $success = 'Account created successfully! You can now login.';

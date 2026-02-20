@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sentiment Graph</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', 'Yu Gothic', 'Meiryo', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        .top-nav {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        .nav-button {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 12px 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: bold;
+            transition: transform 0.2s, box-shadow 0.2s;
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+            text-align: center;
+        }
+        .nav-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+        .nav-button.secondary {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+        .nav-button.tertiary {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .chart-container {
+            position: relative;
+            height: 500px;
+            margin: 20px 0;
+        }
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+        .error {
+            background: #fee;
+            border: 2px solid #fcc;
+            padding: 20px;
+            border-radius: 10px;
+            color: #c33;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="top-nav">
+            <a href="create_form_noauth.php" class="nav-button">
+                📝 入力フォーム<br><small>Input Form</small>
+            </a>
+            <a href="historical_graph.html?patient_id=2" class="nav-button secondary">
+                📈 履歴グラフ<br><small>History Graph</small>
+            </a>
+            <a href="personality_profile.html?patient_id=2" class="nav-button tertiary">
+                🧠 性格特性<br><small>Personality Profile</small>
+            </a>
+        </div>
+
+        <h1>📊 Sentiment Graph</h1>
+        
+        <div id="loading" class="loading">Loading...</div>
+        <div id="error" class="error" style="display: none;"></div>
+        
+        <div class="chart-container" style="display: none;" id="chartContainer">
+            <canvas id="chart"></canvas>
+        </div>
+    </div>
+
+    <script>
+        let chart = null;
+
+        async function loadData() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const patientId = urlParams.get('patient_id') || 2;
+            
+            // Update nav buttons
+            document.querySelectorAll('.nav-button').forEach(btn => {
+                if (btn.href && btn.href.includes('?')) {
+                    const url = new URL(btn.href);
+                    url.searchParams.set('patient_id', patientId);
+                    btn.href = url.toString();
+                }
+            });
+
+            try {
+                const response = await fetch(`/api/japanese_fy_results.php?patient_id=${patientId}&t=${Date.now()}`, {
+                    cache: 'no-cache'
+                });
+                
+                const result = await response.json();
+
+                if (!result.success || !result.data || result.data.length === 0) {
+                    throw new Error('No data found');
+                }
+
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('chartContainer').style.display = 'block';
+                
+                drawChart(result.data);
+
+            } catch (err) {
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('error').style.display = 'block';
+                document.getElementById('error').textContent = 'Error: ' + err.message;
+            }
+        }
+
+        function drawChart(data) {
+            const sorted = [...data].sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+            const labels = sorted.map(d => new Date(d.created_at).toLocaleDateString());
+            
+            const datasets = [
+                { label: 'A Score', data: sorted.map(d => parseFloat(d.a_score)), borderColor: '#FF6384', tension: 0.4 },
+                { label: 'B Score', data: sorted.map(d => parseFloat(d.b_score)), borderColor: '#36A2EB', tension: 0.4 },
+                { label: 'C Score', data: sorted.map(d => parseFloat(d.c_score)), borderColor: '#FFCE56', tension: 0.4 },
+                { label: 'D Score', data: sorted.map(d => parseFloat(d.d_score)), borderColor: '#4BC0C0', tension: 0.4 },
+                { label: 'H Score', data: sorted.map(d => parseFloat(d.h_score)), borderColor: '#9966FF', tension: 0.4 }
+            ];
+
+            if (chart) chart.destroy();
+
+            chart = new Chart(document.getElementById('chart'), {
+                type: 'line',
+                data: { labels, datasets },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: { beginAtZero: true, max: 1 }
+                    }
+                }
+            });
+        }
+
+        window.addEventListener('load', loadData);
+    </script>
+</body>
+</html>

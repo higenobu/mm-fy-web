@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Historical Sentiment Analysis</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', 'Yu Gothic', 'Meiryo', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        .top-nav {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        .nav-button {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: bold;
+            transition: transform 0.2s, box-shadow 0.2s;
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .nav-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+        .nav-button.secondary {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+        .nav-button.tertiary {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .controls {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+        .controls button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+        .controls button:hover {
+            background: #5568d3;
+        }
+        .chart-container {
+            position: relative;
+            height: 500px;
+            margin: 20px 0;
+        }
+        .loading {
+            text-align: center;
+            padding: 40px;
+            font-size: 1.2em;
+            color: #666;
+        }
+        .error {
+            background: #fee;
+            border: 2px solid #fcc;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+            color: #c33;
+        }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+        }
+        .stat-card h3 {
+            font-size: 0.9em;
+            opacity: 0.9;
+            margin-bottom: 10px;
+        }
+        .stat-card .value {
+            font-size: 2em;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="top-nav">
+            <a href="create_form_noauth.php" class="nav-button">
+                📝 入力フォーム<br><small>Input Form</small>
+            </a>
+            <a href="historical_graph.html?patient_id=2" class="nav-button secondary">
+                📈 履歴グラフ<br><small>History Graph</small>
+            </a>
+            <a href="personality_profile.html?patient_id=2" class="nav-button tertiary">
+                🧠 性格特性<br><small>Personality Profile</small>
+            </a>
+        </div>
+
+        <h1>📊 Historical Sentiment Analysis</h1>
+        
+        <div class="controls">
+            <label>Patient ID: <input type="number" id="patientId" value="2" min="1"></label>
+            <button onclick="loadData()">🔄 Reload Data</button>
+            <button onclick="exportCSV()">💾 Export CSV</button>
+        </div>
+        
+        <div id="loading" class="loading" style="display: none;">Loading...</div>
+        <div id="error" class="error" style="display: none;"></div>
+        
+        <div class="stats" id="stats" style="display: none;"></div>
+        
+        <div class="chart-container" style="display: none;" id="chartContainer">
+            <canvas id="chart"></canvas>
+        </div>
+    </div>
+
+    <script>
+        let chart = null;
+        let data = [];
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const defaultPatientId = urlParams.get('patient_id') || 2;
+        document.getElementById('patientId').value = defaultPatientId;
+
+        // Update nav buttons with current patient_id
+        function updateNavButtons() {
+            const patientId = document.getElementById('patientId').value;
+            document.querySelectorAll('.nav-button').forEach(btn => {
+                if (btn.href && btn.href.includes('?')) {
+                    const url = new URL(btn.href);
+                    url.searchParams.set('patient_id', patientId);
+                    btn.href = url.toString();
+                }
+            });
+        }
+
+// Add at the beginning of your loadData function
+
+async function loadData() {
+    try {
+        showLoading(true);
+        
+        // ✅ SECURITY: Don't send patient_id, let backend use session
+        // const patientId = getPatientIdFromURL();  // ❌ OLD WAY
+        
+        // ✅ NEW: Backend will automatically use logged-in user's patient_id
+        const response = await fetch('/api/japanese_fy_results.php');
+        
+        if (response.status === 401) {
+            // Not authenticated, redirect to login
+            window.location.href = '/login.php';
+            return;
+        }
+        
+        if (response.status === 403) {
+            throw new Error('Access denied to patient records');
+        }
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const result = await response.json();
+        
+        if (!result.success) {
+            throw new Error(result.error || 'Failed to load data');
+        }
+        
+        // Display which patient(s) data is shown
+        const patientInfo = document.getElementById('patient-info');
+        if (patientInfo) {
+            patientInfo.textContent = `Showing data for: ${result.accessible_patients.join(', ')}`;
+        }
+        
+        // Rest of your code...
+        processData(result.data);
+        
+    } catch (error) {
+        console.error('Error loading data:', error);
+        showError(error.message);
+    } finally {
+        showLoading(false);
+    }
+}
+ //   
+        function showStats(data) {
+            const stats = document.getElementById('stats');
+            const avgA = (data.reduce((sum, d) => sum + parseFloat(d.a_score), 0) / data.length).toFixed(3);
+            const avgB = (data.reduce((sum, d) => sum + parseFloat(d.b_score), 0) / data.length).toFixed(3);
+            
+            stats.innerHTML = `
+                <div class="stat-card">
+                    <h3>Total Records</h3>
+                    <div class="value">${data.length}</div>
+                </div>
+                <div class="stat-card">
+                    <h3>Avg A Score</h3>
+                    <div class="value">${avgA}</div>
+                </div>
+                <div class="stat-card">
+                    <h3>Avg B Score</h3>
+                    <div class="value">${avgB}</div>
+                </div>
+            `;
+        }
+
+        function drawChart(data) {
+            const sorted = [...data].sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+            const labels = sorted.map(d => new Date(d.created_at).toLocaleDateString());
+            
+            const datasets = [
+                {
+                    label: 'A Score',
+                    data: sorted.map(d => parseFloat(d.a_score)),
+                    borderColor: '#FF6384',
+                    tension: 0.4
+                },
+                {
+                    label: 'B Score',
+                    data: sorted.map(d => parseFloat(d.b_score)),
+                    borderColor: '#36A2EB',
+                    tension: 0.4
+                },
+                {
+                    label: 'C Score',
+                    data: sorted.map(d => parseFloat(d.c_score)),
+                    borderColor: '#FFCE56',
+                    tension: 0.4
+                }
+            ];
+
+            if (chart) chart.destroy();
+
+            chart = new Chart(document.getElementById('chart'), {
+                type: 'line',
+                data: { labels, datasets },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: { beginAtZero: true, max: 1 }
+                    }
+                }
+            });
+        }
+
+        function exportCSV() {
+            if (data.length === 0) {
+                alert('No data to export');
+                return;
+            }
+            let csv = 'Date,Text,A,B,C,D,H\n';
+            data.forEach(d => {
+                csv += `${d.created_at},"${d.text}",${d.a_score},${d.b_score},${d.c_score},${d.d_score},${d.h_score}\n`;
+            });
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `sentiment_${Date.now()}.csv`;
+            a.click();
+        }
+
+        window.addEventListener('load', () => {
+            updateNavButtons();
+            loadData();
+        });
+    </script>
+</body>
+</html>

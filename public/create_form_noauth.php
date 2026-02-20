@@ -25,10 +25,7 @@
     <h1>📝 Create Patient Memo with Sentiment Analysis</h1>
 
     <form id="memoForm">
-        <div class="form-group">
-            <label>👤 Patient ID:</label>
-            <input type="number" name="patient_id" required value="2" min="1">
-        </div>
+        
 
         <div class="form-group">
             <label>📌 Title (optional):</label>
