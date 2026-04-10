@@ -4,8 +4,7 @@ namespace App\Utils;
 
 class SentimentAPI
 {
-// url = "http://172.17.21.54:8000/analyze"
-    //const SENTIMENT_API_URL = 'http://172.17.21.54:8000/analyze';
+
     const SENTIMENT_API_URL = 'https://api.kcg.edu/analyzefy';
     public static function analyze(string $text): ?array
     {
