@@ -7,7 +7,7 @@ class SentimentAPI
     public static function analyze(string $text): ?array
     {
         // Python API URL
-        $url = 'http://172.17.21.54:8000/analyze';
+        $url = 'http://xxx:8000/analyze';
 
         // Prepare the data to send
         $data = json_encode(['text' => $text]);
